@@ -48,7 +48,7 @@ MiniUML es gratuito para uso académico y personal.
 
 Si la herramienta te resulta útil y querés apoyar voluntariamente su mantenimiento y futuras actualizaciones:
 
-**Alias de donación:** `angelvazquezcaceres@gmail.com`
+**Alias de donación:** `angelvazquezcaceres08@gmail.com`
 
 Las donaciones son voluntarias y no son necesarias para descargar o utilizar MiniUML.
 
