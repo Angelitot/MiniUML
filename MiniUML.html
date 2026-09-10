@@ -1,0 +1,3732 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MiniUML — Editor de diagramas UML</title>
+<style>
+:root, html[data-theme="dark"]{
+  --bg:#0f1319; --panel:#171c24; --panel2:#1e242e; --panel3:#252d39;
+  --border:#2b3441; --text:#e6ebf2; --muted:#94a1b2; --accent:#5b8def;
+  --accentSoft:rgba(91,141,239,.16); --danger:#e2585c; --ok:#3fb27f;
+  --shadow:0 8px 24px rgba(0,0,0,.35);
+  --field:#111721; --fieldText:#e9eef6; --fieldBorder:#394453; --ph:#7e8b9c;
+  color-scheme:dark;
+}
+html[data-theme="light"]{
+  --bg:#e9edf3; --panel:#ffffff; --panel2:#f4f7fb; --panel3:#e8edf5;
+  --border:#d3dae5; --text:#141a22; --muted:#5c6878; --accent:#2f6bd8;
+  --accentSoft:rgba(47,107,216,.12); --danger:#c8474b; --ok:#2f9268;
+  --shadow:0 8px 24px rgba(20,30,50,.12);
+  --field:#ffffff; --fieldText:#141a22; --fieldBorder:#c3ccda; --ph:#8a94a3;
+  color-scheme:light;
+}
+html[data-theme="dark"]{ color-scheme:dark; }
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  font:13px/1.45 "Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+  background:var(--bg); color:var(--text);
+  display:grid; grid-template-rows:auto auto minmax(0,1fr) auto;
+  overflow:hidden; -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+/* ---------- controles de formulario (explícitos en los dos temas) ---------- */
+input,select,textarea{
+  font:inherit; background-color:var(--field); color:var(--fieldText);
+  border:1px solid var(--fieldBorder); border-radius:6px; padding:5px 7px;
+}
+textarea{resize:vertical;min-height:56px;line-height:1.45}
+select{padding-right:5px}
+option,optgroup{background-color:var(--panel);color:var(--text)}
+input::placeholder,textarea::placeholder{color:var(--ph);opacity:1}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--accent); outline:none; box-shadow:0 0 0 2px var(--accentSoft);
+}
+input:disabled,select:disabled,textarea:disabled{
+  background-color:var(--panel3); color:var(--muted); border-color:var(--border);
+  cursor:not-allowed; opacity:1;
+}
+input[type=checkbox],input[type=radio]{
+  width:auto; accent-color:var(--accent); background:none; border:0; padding:0; margin:0;
+}
+::-webkit-scrollbar{width:11px;height:11px}
+::-webkit-scrollbar-thumb{background:var(--panel3);border-radius:6px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- top bar ---------- */
+#topbar{display:flex;align-items:center;gap:14px;padding:7px 12px;background:var(--panel);border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;letter-spacing:.2px;font-size:14px;white-space:nowrap}
+.brand .mark{width:20px;height:20px;border-radius:5px;background:linear-gradient(135deg,var(--accent),#8f6bf0);display:grid;place-items:center;color:#fff;font-size:11px;font-weight:800}
+.group{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.tb{background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text)}
+.tb:disabled{color:var(--muted)}
+.tb.on{background:var(--accentSoft);border-color:var(--accent);color:var(--accent)}
+.tb:hover{background:var(--panel3)}
+.tb:disabled{opacity:.42;cursor:default}
+.tb.icon{padding:5px 8px}
+.spacer{flex:1}
+.sel{display:flex;align-items:center;gap:7px;color:var(--muted);white-space:nowrap}
+.menuWrap{position:relative}
+.menu{position:absolute;z-index:60;top:calc(100% + 5px);left:0;min-width:190px;background:var(--panel);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow);padding:5px;display:none}
+.menu.open{display:block}
+.menu button{display:block;width:100%;text-align:left;background:none;border:0;padding:7px 9px;border-radius:6px}
+.menu button:hover{background:var(--accentSoft)}
+
+/* ---------- diagram tabs ---------- */
+#tabsbar{display:flex;align-items:stretch;gap:6px;padding:5px 10px;background:var(--panel2);border-bottom:1px solid var(--border);overflow-x:auto}
+#tabs{display:flex;gap:5px}
+.tab{display:flex;align-items:center;gap:7px;background:transparent;border:1px solid transparent;border-radius:6px;padding:4px 8px;color:var(--muted);white-space:nowrap}
+.tab:hover{background:var(--panel3)}
+.tab.active{background:var(--panel);border-color:var(--border);color:var(--text);font-weight:600}
+.tab .x{opacity:.5;font-size:14px;line-height:1}
+.tab .x:hover{opacity:1;color:var(--danger)}
+#btnAddDiagram{background:var(--panel);border:1px dashed var(--border);border-radius:6px;color:var(--muted);padding:2px 10px}
+
+/* ---------- main layout ---------- */
+main{display:grid;grid-template-columns:196px minmax(0,1fr) 292px;min-height:0}
+.side{background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
+#right{border-right:0;border-left:1px solid var(--border)}
+.side-h{padding:9px 12px;font-weight:600;font-size:11.5px;color:var(--muted);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+#tools,#props{overflow:auto;padding:9px;flex:1}
+.toolgrp{margin:2px 0 12px}
+.toolgrp h4{margin:0 0 6px;font-size:10.5px;font-weight:600;color:var(--muted);letter-spacing:.4px}
+.tool{display:flex;align-items:center;gap:9px;width:100%;background:transparent;border:1px solid transparent;border-radius:7px;padding:6px 8px;text-align:left;color:var(--text)}
+.tool:hover{background:var(--panel2)}
+.tool.active{background:var(--accentSoft);border-color:var(--accent);color:var(--text);font-weight:600}
+.tool svg{flex:0 0 auto;color:var(--muted)}
+.tool.active svg{color:var(--accent)}
+
+/* ---------- stage ---------- */
+#stage{position:relative;min-width:0;background:#fff;overflow:hidden}
+#canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:default}
+#canvas.tool-add{cursor:crosshair}
+#canvas.tool-link{cursor:cell}
+#canvas.panning{cursor:grabbing}
+/* Vive sobre el lienzo, que siempre es blanco: se declara claro a propósito,
+   independiente del tema de la interfaz. */
+#inlineEdit{
+  position:absolute; display:none; z-index:20; color-scheme:light;
+  border:1.5px solid #2f6bd8; border-radius:4px; background-color:#ffffff; color:#111820;
+  padding:2px 5px; font:600 13px "Segoe UI",Arial,sans-serif; box-shadow:0 3px 10px rgba(0,0,0,.25);
+}
+#inlineEdit::placeholder{color:#98a2b1;opacity:1}
+#inlineEdit:focus{outline:none;box-shadow:0 0 0 2px rgba(47,107,216,.28)}
+#zoombar{position:absolute;left:12px;bottom:12px;display:flex;gap:4px;align-items:center;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:var(--shadow);z-index:15}
+#zoombar button{background:transparent;border:0;color:var(--text);border-radius:5px;padding:4px 8px}
+#zoombar button:hover{background:var(--panel3)}
+#zoombar button.on{background:var(--accentSoft);color:var(--accent)}
+#zoomVal{min-width:52px;text-align:center;color:var(--muted);font-variant-numeric:tabular-nums}
+#hint{position:absolute;right:12px;bottom:12px;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--muted);box-shadow:var(--shadow);z-index:15;max-width:320px;display:none}
+
+/* ---------- Diseño Orientado a Objetos ---------- */
+#oop{
+  position:absolute; inset:0; z-index:35; display:none;
+  grid-template-rows:auto minmax(0,1fr) auto;
+  background:var(--bg); color:var(--text); border-left:1px solid var(--border);
+}
+#oop.show{display:grid}
+.oop-head{
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  padding:10px 14px; background:var(--panel); border-bottom:1px solid var(--border);
+}
+.oop-head h3{margin:0;font-size:14px;font-weight:700;white-space:nowrap}
+.oop-actions{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.oop-body{overflow:auto;padding:14px;background:var(--bg)}
+#oopTable{
+  width:100%; min-width:660px; border-collapse:collapse;
+  background:var(--panel); border:1px solid var(--border); border-radius:8px;
+}
+#oopTable th,#oopTable td{border:1px solid var(--border);padding:7px 9px;vertical-align:top;text-align:left}
+#oopTable thead th{
+  background:var(--panel2); color:var(--text); font-size:11.5px; font-weight:700;
+  letter-spacing:.3px; position:sticky; top:0; z-index:1;
+}
+#oopTable th.c1,#oopTable td.c1{width:24%}
+#oopTable th.c4,#oopTable td.c4{width:66px}
+#oopTable tbody tr:nth-child(even) td{background:var(--panel2)}
+#oopTable input,#oopTable textarea{width:100%;display:block}
+#oopTable textarea{min-height:62px;resize:vertical;font-size:12.5px;line-height:1.5;overflow:auto}
+#oopTable input.bad,#oopTable textarea.bad{border-color:var(--danger);box-shadow:0 0 0 2px rgba(200,71,75,.22)}
+#oopTable td.c4{white-space:nowrap;text-align:center}
+#oopTable td.c4 .mini{margin:2px 1px}
+.oop-empty{color:var(--muted);margin:14px 2px;line-height:1.6}
+.oop-foot{padding:8px 14px;border-top:1px solid var(--border);background:var(--panel);color:var(--muted);font-size:11.5px}
+::selection{background:var(--accent);color:#fff}
+
+/* ---------- properties ---------- */
+.f{display:block;margin:0 0 9px}
+.f>span{display:block;font-size:11px;color:var(--muted);margin-bottom:3px}
+.f input,.f select,.f textarea{width:100%}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rowlist{display:flex;flex-direction:column;gap:5px;margin-bottom:7px}
+.row{display:grid;gap:4px;align-items:center}
+.row.attr{grid-template-columns:46px 1fr 1fr auto}
+.row.meth{grid-template-columns:46px 1fr 1fr auto}
+.row.slot{grid-template-columns:1fr 1fr auto}
+.row.msg{grid-template-columns:34px 1fr 44px auto}
+.rowbtns{display:flex;gap:2px}
+.rowbtns .mini{padding:3px 4px;font-size:11px;line-height:1}
+.row input,.row select{padding:4px 5px;font-size:12px;min-width:0}
+.mini{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:3px 6px;color:var(--muted);line-height:1}
+.mini:hover{color:var(--danger);border-color:var(--danger)}
+.addbtn{width:100%;background:var(--panel2);border:1px dashed var(--border);border-radius:6px;padding:5px;color:var(--muted)}
+.addbtn:hover{color:var(--accent);border-color:var(--accent)}
+.pgroup{border-top:1px solid var(--border);margin-top:12px;padding-top:11px}
+.pgroup h5{margin:0 0 8px;font-size:11px;color:var(--muted);font-weight:600}
+.badge{display:inline-block;background:var(--accentSoft);color:var(--accent);border-radius:5px;padding:2px 7px;font-size:11px;font-weight:600;margin-bottom:10px}
+.actions{display:flex;gap:6px;margin-top:12px}
+.actions .tb{flex:1;text-align:center}
+.tb.danger:hover{border-color:var(--danger);color:var(--danger)}
+.empty{color:var(--muted);line-height:1.6}
+.empty kbd{background:var(--panel2);border:1px solid var(--border);border-bottom-width:2px;border-radius:4px;padding:1px 5px;font-size:11px;font-family:inherit}
+label.check{display:flex;align-items:center;gap:7px;color:var(--muted);margin:0 0 8px}
+
+/* ---------- status ---------- */
+#status{display:flex;justify-content:space-between;gap:12px;padding:5px 12px;background:var(--panel);border-top:1px solid var(--border);color:var(--muted);font-size:11.5px}
+#saveState{white-space:nowrap}
+#saveState.saved{color:var(--ok)}
+#saveState.dirty{color:var(--accent)}
+
+/* ---------- context menu, toasts, modal ---------- */
+#ctx{position:fixed;z-index:200;min-width:180px;background:var(--panel);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow);padding:5px;display:none}
+#ctx button{display:block;width:100%;text-align:left;background:none;border:0;padding:7px 9px;border-radius:6px;color:var(--text)}
+#ctx button:hover{background:var(--accentSoft)}
+#ctx hr{border:0;border-top:1px solid var(--border);margin:4px 2px}
+#toasts{position:fixed;z-index:300;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.toast{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;padding:9px 13px;box-shadow:var(--shadow);max-width:330px;white-space:pre-line;line-height:1.5}
+.toast.err{border-left-color:var(--danger)}
+.toast.ok{border-left-color:var(--ok)}
+#modal{position:fixed;inset:0;z-index:400;background:rgba(6,10,16,.55);display:none;place-items:center}
+#modal.open{display:grid}
+#modal .box{background:var(--panel);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:18px;width:min(420px,92vw)}
+#modal h3{margin:0 0 10px;font-size:15px}
+#modal p{margin:0 0 14px;color:var(--muted);line-height:1.55}
+#modal input,#modal select,#modal textarea{width:100%;margin-bottom:14px}
+
+@media (max-width:1080px){ main{grid-template-columns:170px minmax(0,1fr) 250px} }
+@media (max-width:820px){
+  main{grid-template-columns:minmax(0,1fr)}
+  .side{position:absolute;z-index:40;top:0;bottom:0;width:230px;box-shadow:var(--shadow);display:none}
+  .side.show{display:flex}
+  #left{left:0} #right{right:0;left:auto}
+  main{position:relative}
+  #panelToggles{display:flex !important}
+}
+#panelToggles{display:none;gap:4px}
+</style>
+</head>
+<body>
+<header id="topbar">
+  <div class="brand"><span class="mark">U</span>MiniUML</div>
+  <div class="group">
+    <button class="tb" id="btnNew" title="Crear un proyecto vacío">Nuevo</button>
+    <button class="tb" id="btnSave" title="Guardar el proyecto en este navegador (Ctrl+S)">Guardar</button>
+    <button class="tb" id="btnLoad" title="Abrir un archivo .miniuml.json">Cargar</button>
+    <div class="menuWrap">
+      <button class="tb" id="btnExport" title="Exportar proyecto o diagrama">Exportar ▾</button>
+      <div class="menu" id="exportMenu">
+        <button data-x="json">Proyecto (.json)</button>
+        <button data-x="svg">Diagrama actual (.svg)</button>
+        <button data-x="png">Diagrama actual (.png)</button>
+      </div>
+    </div>
+    <button class="tb" id="btnUndo" title="Deshacer (Ctrl+Z)">Deshacer</button>
+    <button class="tb" id="btnRedo" title="Rehacer (Ctrl+Y)">Rehacer</button>
+    <button class="tb" id="btnExample" title="Cargar el proyecto de demostración">Ejemplo</button>
+    <button class="tb" id="btnOop" title="Tabla Clase / Atributos / Métodos para armar el diagrama de clases">Diseño OO</button>
+  </div>
+  <div class="spacer"></div>
+  <div class="group" id="panelToggles">
+    <button class="tb icon" id="btnLeftPanel" title="Herramientas">▤</button>
+    <button class="tb icon" id="btnRightPanel" title="Propiedades">▥</button>
+  </div>
+  <label class="sel">Tipo de diagrama <select id="selType"></select></label>
+  <button class="tb icon" id="btnTheme" title="Cambiar entre modo oscuro y claro">☾</button>
+</header>
+
+<div id="tabsbar">
+  <div id="tabs"></div>
+  <button id="btnAddDiagram" title="Agregar un diagrama del tipo seleccionado">+</button>
+</div>
+
+<main>
+  <aside class="side" id="left">
+    <div class="side-h"><span>Herramientas</span></div>
+    <div id="tools"></div>
+  </aside>
+  <section id="stage">
+    <svg id="canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+    <input id="inlineEdit" type="text" autocomplete="off">
+    <div id="zoombar">
+      <button id="zOut" title="Alejar">−</button>
+      <span id="zoomVal">100%</span>
+      <button id="zIn" title="Acercar">+</button>
+      <button id="zFit" title="Ajustar al contenido">Ajustar</button>
+      <button id="zGrid" title="Mostrar u ocultar la cuadrícula">Cuadrícula</button>
+      <button id="zSnap" title="Ajustar elementos a la cuadrícula">Imantar</button>
+    </div>
+    <div id="hint"></div>
+    <section id="oop" aria-label="Diseño Orientado a Objetos">
+      <header class="oop-head">
+        <h3>Diseño Orientado a Objetos</h3>
+        <div class="oop-actions">
+          <button class="tb" id="oopAdd" title="Agregar una fila a la tabla">+ Agregar clase</button>
+          <button class="tb" id="oopSync" title="Crear o actualizar estas clases en el diagrama (no crea relaciones)">Sincronizar con diagrama</button>
+          <button class="tb" id="oopCopy" title="Copiar como tabla para pegar en Word o Docs">Copiar tabla</button>
+          <button class="tb" id="oopCopyTxt" title="Copiar como texto estructurado">Copiar texto</button>
+          <button class="tb icon" id="oopClose" title="Cerrar (Esc)">✕</button>
+        </div>
+      </header>
+      <div class="oop-body">
+        <table id="oopTable">
+          <thead><tr><th class="c1">Clase</th><th>Atributos</th><th>Métodos</th><th class="c4"></th></tr></thead>
+          <tbody id="oopRows"></tbody>
+        </table>
+        <p class="oop-empty" id="oopEmpty">Todavía no hay clases. Usá <b>+ Agregar clase</b> y escribí un atributo o método por línea.</p>
+      </div>
+      <footer class="oop-foot" id="oopFoot"></footer>
+    </section>
+  </section>
+  <aside class="side" id="right">
+    <div class="side-h"><span>Propiedades</span></div>
+    <div id="props"></div>
+  </aside>
+</main>
+
+<footer id="status"><span id="stLeft"></span><span id="saveState" class="saved" title="Estado del guardado en este navegador">✓ Guardado</span><span id="stRight"></span></footer>
+
+<div id="ctx"></div>
+<div id="toasts"></div>
+<div id="modal"><div class="box"></div></div>
+<input type="file" id="fileIn" accept=".json,application/json" style="display:none">
+
+<script>
+/* =========================================================================
+   MiniUML — editor UML de un solo archivo
+   1. Núcleo: utilidades, paleta, definiciones de diagramas y herramientas
+   ========================================================================= */
+'use strict';
+const APP_NAME = 'MiniUML', APP_VERSION = '1.0';
+const NS = 'http://www.w3.org/2000/svg';
+const FONT = "'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+const uid = (p) => (p || 'x') + '_' + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+const clone = (o) => JSON.parse(JSON.stringify(o));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const measure = (t, s) => String(t == null ? '' : t).length * (s || 12) * 0.56;
+const nowName = () => new Date().toISOString().slice(0, 10);
+
+/* Paleta del lienzo: siempre clara, para que los diagramas se lean y se
+   exporten igual en modo oscuro y en modo claro. */
+const P = {
+  ink: '#1c2530', fill: '#ffffff', soft: '#f2f5fa', grid: '#e3e8f0',
+  muted: '#5f6b7c', sel: '#2f6bd8', selSoft: 'rgba(47,107,216,.10)', bad: '#c8474b'
+};
+
+/* ---------- creación de nodos SVG ---------- */
+function el(tag, attrs, kids) {
+  const n = document.createElementNS(NS, tag);
+  if (attrs) for (const k in attrs) { const v = attrs[k]; if (v !== null && v !== undefined) n.setAttribute(k, v); }
+  if (kids) (Array.isArray(kids) ? kids : [kids]).forEach(c => { if (c) n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+  return n;
+}
+function txt(x, y, s, o) {
+  o = o || {};
+  const t = el('text', {
+    x: x, y: y, 'font-family': FONT, 'font-size': o.size || 12,
+    fill: o.fill || P.ink, 'text-anchor': o.anchor || 'start',
+    'font-weight': o.weight || null, 'font-style': o.italic ? 'italic' : null,
+    'text-decoration': o.underline ? 'underline' : null,
+    'pointer-events': 'none'
+  }, String(s == null ? '' : s));
+  if (o.halo) { t.setAttribute('stroke', P.fill); t.setAttribute('stroke-width', 3.2); t.setAttribute('paint-order', 'stroke'); t.setAttribute('stroke-linejoin', 'round'); }
+  return t;
+}
+const line = (x1, y1, x2, y2, o) => el('line', Object.assign({ x1, y1, x2, y2, stroke: P.ink, 'stroke-width': 1.4 }, o || {}));
+const path = (d, o) => el('path', Object.assign({ d, fill: 'none', stroke: P.ink, 'stroke-width': 1.4 }, o || {}));
+
+/* ---------- tipos de diagrama ---------- */
+const DIAGRAMS = {
+  usecase: { name: 'Diagrama de Casos de Uso', short: 'Casos de Uso' },
+  class: { name: 'Diagrama de Clases', short: 'Clases' },
+  object: { name: 'Diagrama de Objetos', short: 'Objetos' },
+  state: { name: 'Diagrama de Estados', short: 'Estados' },
+  sequence: { name: 'Diagrama de Secuencia', short: 'Secuencia' },
+  communication: { name: 'Diagrama de Comunicación', short: 'Comunicación' },
+  deployment: { name: 'Diagrama de Despliegue', short: 'Despliegue' }
+};
+const DIAGRAM_ORDER = ['usecase', 'class', 'object', 'state', 'sequence', 'communication', 'deployment'];
+
+/* ---------- valores por defecto de cada elemento ---------- */
+const EDEF = {
+  actor: { w: 74, h: 96, name: 'Actor' },
+  usecase: { w: 158, h: 68, name: 'Caso de uso' },
+  boundary: { w: 460, h: 360, name: 'Sistema' },
+  class: { w: 186, h: 96, name: 'Clase' },
+  interface: { w: 186, h: 84, name: 'Interfaz' },
+  object: { w: 190, h: 70, name: 'objeto', className: 'Clase' },
+  initial: { w: 24, h: 24, name: '' },
+  state: { w: 148, h: 58, name: 'Estado' },
+  final: { w: 28, h: 28, name: '' },
+  participant: { w: 148, h: 46, name: 'Participante' },
+  activation: { w: 12, h: 90, name: '' },
+  fragment: { w: 420, h: 170, name: 'alt' },
+  role: { w: 168, h: 48, name: 'objeto', className: 'Clase' },
+  node: { w: 232, h: 128, name: 'Nodo', stereotype: 'device' },
+  artifact: { w: 168, h: 58, name: 'artefacto.jar' }
+};
+const CONTAINERS = ['boundary', 'node', 'fragment'];
+const RESIZABLE = ['boundary', 'fragment', 'node', 'class', 'interface', 'object', 'state', 'usecase', 'role', 'artifact', 'activation'];
+
+/* ---------- relaciones ---------- */
+const RDEF = {
+  association: { label: 'Asociación', dash: 0, mult: true },
+  aggregation: { label: 'Agregación', dash: 0, start: 'diamondOpen', mult: true },
+  composition: { label: 'Composición', dash: 0, start: 'diamondFilled', mult: true },
+  generalization: { label: 'Generalización', dash: 0, end: 'triangle' },
+  dependency: { label: 'Dependencia', dash: 1, end: 'arrowOpen' },
+  realization: { label: 'Realización', dash: 1, end: 'triangle' },
+  include: { label: 'Include', dash: 1, end: 'arrowOpen', stereo: 'include' },
+  extend: { label: 'Extend', dash: 1, end: 'arrowOpen', stereo: 'extend' },
+  transition: { label: 'Transición', dash: 0, end: 'arrowOpen' },
+  link: { label: 'Enlace', dash: 0, mult: false },
+  message: { label: 'Mensaje', dash: 0, end: 'arrowFilled' },
+  return: { label: 'Retorno', dash: 1, end: 'arrowOpen' },
+  connector: { label: 'Conector', dash: 0 },
+  commpath: { label: 'Camino de comunicación', dash: 0 },
+  manifest: { label: 'Manifestación', dash: 1, end: 'arrowOpen', stereo: 'manifest' }
+};
+
+/* Reglas: qué se puede conectar con qué, en cada tipo de diagrama. */
+const RULES = {
+  usecase: {
+    association: { pairs: [['actor', 'usecase'], ['usecase', 'actor']] },
+    include: { from: ['usecase'], to: ['usecase'] },
+    extend: { from: ['usecase'], to: ['usecase'] },
+    generalization: { from: ['actor', 'usecase'], to: ['actor', 'usecase'], same: true }
+  },
+  class: {
+    association: { from: ['class', 'interface'], to: ['class', 'interface'] },
+    aggregation: { from: ['class', 'interface'], to: ['class', 'interface'] },
+    composition: { from: ['class', 'interface'], to: ['class', 'interface'] },
+    generalization: { from: ['class', 'interface'], to: ['class', 'interface'] },
+    dependency: { from: ['class', 'interface'], to: ['class', 'interface'] },
+    realization: { from: ['class'], to: ['interface'] }
+  },
+  object: { link: { from: ['object'], to: ['object'] } },
+  state: { transition: { from: ['initial', 'state'], to: ['state', 'final'] } },
+  sequence: {
+    message: { from: ['participant'], to: ['participant'] },
+    return: { from: ['participant'], to: ['participant'] }
+  },
+  communication: {
+    connector: { from: ['role'], to: ['role'] },
+    message: { from: ['role'], to: ['role'] }
+  },
+  deployment: {
+    commpath: { from: ['node'], to: ['node'] },
+    generalization: { from: ['node'], to: ['node'] },
+    manifest: { from: ['artifact'], to: ['node', 'artifact'] }
+  }
+};
+
+/* ---------- iconos ---------- */
+const ico = (inner, o) => '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"' + (o || '') + '>' + inner + '</svg>';
+function relIcon(dash, end, start) {
+  let s = '<line x1="3" y1="10" x2="17" y2="10"' + (dash ? ' stroke-dasharray="3 2.5"' : '') + '/>';
+  if (end === 'arrowOpen') s += '<path d="M13 6.5 17 10 13 13.5"/>';
+  if (end === 'arrowFilled') s += '<path d="M13 6.5 17 10 13 13.5Z" fill="currentColor"/>';
+  if (end === 'triangle') s += '<path d="M13 6 17 10 13 14Z" fill="none"/>';
+  if (start === 'diamondOpen') s += '<path d="M3 10 6 7.5 9 10 6 12.5Z" fill="none"/>';
+  if (start === 'diamondFilled') s += '<path d="M3 10 6 7.5 9 10 6 12.5Z" fill="currentColor"/>';
+  return ico(s);
+}
+const ICON = {
+  select: ico('<path d="M5 3l10 6-4.4 1.3L9 15.5z" fill="currentColor" stroke="none"/>'),
+  actor: ico('<circle cx="10" cy="4.5" r="2.2"/><path d="M10 6.8v6M6 9h8M10 12.8 7.4 17M10 12.8 12.6 17"/>'),
+  usecase: ico('<ellipse cx="10" cy="10" rx="7.5" ry="4.6"/>'),
+  boundary: ico('<rect x="3" y="3.5" width="14" height="13" rx="1.5"/><path d="M3 7h14"/>'),
+  class: ico('<rect x="3" y="4" width="14" height="12" rx="1.2"/><path d="M3 8h14M3 12h14"/>'),
+  interface: ico('<circle cx="10" cy="10" r="4.2"/><path d="M10 3v2.6M10 14.4V17"/>'),
+  object: ico('<rect x="3" y="5" width="14" height="10" rx="1.2"/><path d="M5.6 8.5h8.8"/>'),
+  initial: ico('<circle cx="10" cy="10" r="5" fill="currentColor" stroke="none"/>'),
+  state: ico('<rect x="2.6" y="6" width="14.8" height="8" rx="3.4"/>'),
+  final: ico('<circle cx="10" cy="10" r="6.4"/><circle cx="10" cy="10" r="3.2" fill="currentColor" stroke="none"/>'),
+  participant: ico('<rect x="4.5" y="3" width="11" height="5" rx="1"/><path d="M10 8.4v8.4" stroke-dasharray="2.4 2"/>'),
+  activation: ico('<path d="M10 2.6v14.8" stroke-dasharray="2.4 2"/><rect x="8.2" y="6" width="3.6" height="8" fill="currentColor" fill-opacity=".18"/>'),
+  fragment: ico('<rect x="3" y="4" width="14" height="12" rx="1"/><path d="M3 8h5.5l1.6-1.8"/>'),
+  role: ico('<rect x="3" y="6" width="14" height="8" rx="1.2"/><path d="M5.6 12h8.8"/>'),
+  node: ico('<path d="M3 7.5h10.5V16H3zM3 7.5 6 4.5h10.5v8.5l-3 3M13.5 7.5 16.5 4.5"/>'),
+  artifact: ico('<path d="M5 3.5h6l4 4V16.5H5zM11 3.5V7.5h4"/>'),
+  msg: relIcon(0, 'arrowFilled'),
+  ret: relIcon(1, 'arrowOpen')
+};
+
+/* ---------- herramientas por tipo de diagrama ---------- */
+const T = (kind, type, label, icon, tip, extra) => Object.assign({ kind, type, label, icon, tip }, extra || {});
+const TOOLBARS = {
+  usecase: [
+    { g: 'Elementos', items: [
+      T('element', 'actor', 'Actor', ICON.actor, 'Persona o sistema externo que usa el sistema'),
+      T('element', 'usecase', 'Caso de uso', ICON.usecase, 'Funcionalidad visible para un actor'),
+      T('element', 'boundary', 'Límite del sistema', ICON.boundary, 'Marco que agrupa los casos de uso')] },
+    { g: 'Relaciones', items: [
+      T('relation', 'association', 'Asociación', relIcon(0), 'Une un actor con un caso de uso'),
+      T('relation', 'include', '«include»', relIcon(1, 'arrowOpen'), 'Del caso base al caso incluido'),
+      T('relation', 'extend', '«extend»', relIcon(1, 'arrowOpen'), 'Del caso que extiende al caso base'),
+      T('relation', 'generalization', 'Generalización', relIcon(0, 'triangle'), 'Entre dos actores o dos casos de uso')] }
+  ],
+  class: [
+    { g: 'Elementos', items: [
+      T('element', 'class', 'Clase', ICON.class, 'Clase con atributos y operaciones'),
+      T('element', 'interface', 'Interfaz', ICON.interface, 'Clase con estereotipo «interface»')] },
+    { g: 'Relaciones', items: [
+      T('relation', 'association', 'Asociación', relIcon(0), 'Relación estructural entre clases'),
+      T('relation', 'aggregation', 'Agregación', relIcon(0, null, 'diamondOpen'), 'Desde el todo hacia la parte (rombo blanco)'),
+      T('relation', 'composition', 'Composición', relIcon(0, null, 'diamondFilled'), 'Desde el todo hacia la parte (rombo negro)'),
+      T('relation', 'generalization', 'Generalización', relIcon(0, 'triangle'), 'Desde la subclase hacia la superclase'),
+      T('relation', 'dependency', 'Dependencia', relIcon(1, 'arrowOpen'), 'Usa temporalmente a la otra clase'),
+      T('relation', 'realization', 'Realización', relIcon(1, 'triangle'), 'Desde la clase hacia la interfaz')] }
+  ],
+  object: [
+    { g: 'Elementos', items: [T('element', 'object', 'Objeto', ICON.object, 'Instancia concreta: nombre : Clase')] },
+    { g: 'Relaciones', items: [T('relation', 'link', 'Enlace', relIcon(0), 'Enlace entre dos objetos')] }
+  ],
+  state: [
+    { g: 'Elementos', items: [
+      T('element', 'initial', 'Estado inicial', ICON.initial, 'Punto de partida de la máquina de estados'),
+      T('element', 'state', 'Estado', ICON.state, 'Situación del objeto durante un tiempo'),
+      T('element', 'final', 'Estado final', ICON.final, 'Fin de la vida del objeto')] },
+    { g: 'Relaciones', items: [T('relation', 'transition', 'Transición', relIcon(0, 'arrowOpen'), 'evento [guarda] / acción')] }
+  ],
+  sequence: [
+    { g: 'Elementos', items: [
+      T('element', 'participant', 'Actor', ICON.actor, 'Participante dibujado como actor', { variant: 'actor' }),
+      T('element', 'participant', 'Objeto', ICON.participant, 'Participante con línea de vida', { variant: 'object' }),
+      T('element', 'activation', 'Activación', ICON.activation, 'Clic sobre una línea de vida'),
+      T('element', 'fragment', 'Fragmento', ICON.fragment, 'Bloque alt / opt / loop')] },
+    { g: 'Mensajes', items: [
+      T('relation', 'message', 'Mensaje', ICON.msg, 'Llamada de un participante a otro'),
+      T('relation', 'return', 'Retorno', ICON.ret, 'Respuesta (línea discontinua)')] }
+  ],
+  communication: [
+    { g: 'Elementos', items: [T('element', 'role', 'Rol / objeto', ICON.role, 'Objeto participante de la colaboración')] },
+    { g: 'Relaciones', items: [
+      T('relation', 'connector', 'Conector', relIcon(0), 'Une dos roles'),
+      T('relation', 'message', 'Mensaje numerado', ICON.msg, 'Agrega 1: mensaje() al conector')] }
+  ],
+  deployment: [
+    { g: 'Elementos', items: [
+      T('element', 'node', 'Nodo', ICON.node, 'Recurso de ejecución: «device», «server»…'),
+      T('element', 'artifact', 'Artefacto', ICON.artifact, 'Archivo desplegado dentro de un nodo')] },
+    { g: 'Relaciones', items: [
+      T('relation', 'commpath', 'Camino de comunicación', relIcon(0), 'Conexión física entre nodos'),
+      T('relation', 'generalization', 'Generalización', relIcon(0, 'triangle'), 'Entre dos nodos, del específico al general'),
+      T('relation', 'manifest', '«manifest»', relIcon(1, 'arrowOpen'), 'El artefacto manifiesta un elemento')] }
+  ]
+};
+
+/* Qué puede contener cada contenedor (contención explícita, no geométrica). */
+const CONTAINS = {
+  boundary: ['usecase'],
+  node: ['artifact', 'node'],
+  fragment: ['activation', 'fragment']
+};
+const PARENT_OF = {};                       // tipo de hijo -> contenedores que lo aceptan
+Object.keys(CONTAINS).forEach(c => CONTAINS[c].forEach(k => { (PARENT_OF[k] = PARENT_OF[k] || []).push(c); }));
+
+/* Elementos y relaciones que admite cada tipo de diagrama (se derivan de las
+   herramientas y de las reglas, así no hay dos listas que mantener). */
+const ALLOWED_EL = {}, ALLOWED_REL = {};
+DIAGRAM_ORDER.forEach(t => {
+  ALLOWED_EL[t] = [];
+  (TOOLBARS[t] || []).forEach(g => g.items.forEach(i => {
+    if (i.kind === 'element' && ALLOWED_EL[t].indexOf(i.type) < 0) ALLOWED_EL[t].push(i.type);
+  }));
+  ALLOWED_REL[t] = Object.keys(RULES[t] || {});
+});
+
+/* Regla UML única: la usan tanto la creación interactiva como la validación
+   del JSON, para que un archivo cargado no pueda introducir relaciones que la
+   herramienta no dejaría dibujar. */
+function relationCheck(dtype, type, A, B) {
+  const rule = (RULES[dtype] || {})[type];
+  if (!rule) return { ok: false, why: 'diagram' };
+  if (A.id === B.id && ['transition', 'message', 'return'].indexOf(type) < 0) return { ok: false, why: 'self' };
+  const ok = rule.pairs
+    ? rule.pairs.some(p => p[0] === A.type && p[1] === B.type)
+    : (rule.from.indexOf(A.type) >= 0 && rule.to.indexOf(B.type) >= 0 && (!rule.same || A.type === B.type));
+  return { ok: ok, why: ok ? '' : 'types' };
+}
+
+/* Nombre legible de cada tipo de elemento, para los mensajes de validación. */
+const TYPE_LABEL = {
+  actor: 'Actor', usecase: 'Caso de uso', boundary: 'Límite del sistema', class: 'Clase',
+  interface: 'Interfaz', object: 'Objeto', initial: 'Estado inicial', state: 'Estado',
+  final: 'Estado final', participant: 'Participante', activation: 'Activación',
+  fragment: 'Fragmento', role: 'Rol', node: 'Nodo', artifact: 'Artefacto'
+};
+const TYPE_NAME = (t) => TYPE_LABEL[t] || t;
+
+/* Texto de la regla: «qué se puede unir con qué» para un tipo de relación. */
+function ruleText(dtype, type) {
+  const rule = (RULES[dtype] || {})[type];
+  if (!rule) return '—';
+  if (rule.pairs) return rule.pairs.map(p => TYPE_NAME(p[0]) + ' → ' + TYPE_NAME(p[1])).join('\n');
+  const from = rule.from.map(TYPE_NAME).join(' / '), to = rule.to.map(TYPE_NAME).join(' / ');
+  return from + ' → ' + to + (rule.same ? '  (los dos del mismo tipo)' : '');
+}
+
+const VIS = ['+', '-', '#', '~'];
+const VIS_ANY = ['+', '-', '#', '~', ''];      // '' = el usuario no escribió visibilidad
+const MULTS = ['', '1', '0..1', '*', '0..*', '1..*'];
+const STEREO_NODE = ['device', 'server', 'database', 'executionEnvironment', ''];
+/* =========================================================================
+   2. Modelo: fábrica de elementos, geometría, historial y almacenamiento
+   ========================================================================= */
+
+const ElementFactory = {
+  create(type, x, y, variant) {
+    const d = EDEF[type] || { w: 140, h: 70, name: type };
+    const e = { id: uid(type), type: type, x: Math.round(x), y: Math.round(y), w: d.w, h: d.h, name: d.name };
+    if (type === 'class') { e.attributes = [{ vis: '-', name: 'atributo', type: 'String' }]; e.methods = [{ vis: '+', name: 'operacion', params: '', ret: 'void' }]; e.stereotype = ''; e.abstract = false; }
+    if (type === 'interface') { e.attributes = []; e.methods = [{ vis: '+', name: 'operacion', params: '', ret: 'void' }]; e.stereotype = 'interface'; }
+    if (type === 'object' || type === 'role') { e.className = d.className; e.slots = type === 'object' ? [{ name: 'atributo', value: '"valor"' }] : []; }
+    if (type === 'participant') { e.variant = variant || 'object'; e.className = ''; if (e.variant === 'actor') { e.w = 84; e.h = 78; e.name = 'Actor'; } }
+    if (type === 'activation') { e.owner = null; }
+    if (type === 'fragment') { e.op = 'alt'; e.guard = '[condición]'; e.guard2 = '[si no]'; e.split = 0.5; }
+    if (type === 'node') { e.stereotype = 'device'; }
+    if (type === 'artifact') { e.stereotype = 'artifact'; }
+    if (type === 'state') { e.doActivity = ''; }
+    return e;
+  },
+  relation(type, from, to, routing) {
+    const r = { id: uid('r'), type: type, from: from, to: to, label: '', points: [], routing: routing || 'direct' };
+    if (RDEF[type] && RDEF[type].mult) {
+      r.sourceMultiplicity = ''; r.targetMultiplicity = '';
+      r.sourceRole = ''; r.targetRole = '';
+      r.sourceNavigable = false; r.targetNavigable = false;
+    }
+    if (type === 'transition') { r.event = 'evento'; r.guard = ''; r.action = ''; }
+    if (type === 'connector') r.messages = [];
+    return r;
+  }
+};
+
+/* ---------- geometría ---------- */
+const Geo = {
+  attrText: (a) => (a.vis ? a.vis + ' ' : '') + (a.name || '') + (a.type ? ' : ' + a.type : ''),
+  methText: (m) => (m.vis ? m.vis + ' ' : '') + (m.name || '') + '(' + (m.params || '') + ')' + (m.ret ? ' : ' + m.ret : ''),
+  slotText: (s) => (s.name || '') + ' = ' + (s.value == null ? '' : s.value),
+  objTitle: (e) => (e.name || '') + (e.className ? (e.name ? ' : ' : ': ') + e.className : ''),
+
+  classHead(e) { return 26 + ((e.stereotype && e.stereotype !== 'class') ? 14 : 0); },
+
+  /* Tamaño mínimo que necesita el elemento para mostrar su contenido.
+     Es la única fuente de verdad: la usan bounds(), el redimensionado y
+     el panel de propiedades. */
+  minSize(e) {
+    switch (e.type) {
+      case 'class': case 'interface': {
+        const at = e.attributes || [], me = e.methods || [];
+        let w = measure(e.name, 13.5) + 34;
+        if (e.stereotype) w = Math.max(w, measure('«' + e.stereotype + '»', 11.5) + 30);
+        at.forEach(a => w = Math.max(w, measure(Geo.attrText(a), 12) + 26));
+        me.forEach(m => w = Math.max(w, measure(Geo.methText(m), 12) + 26));
+        return { w: Math.max(110, Math.round(w)), h: Geo.classHead(e) + Math.max(1, at.length) * 16 + 10 + Math.max(1, me.length) * 16 + 10 };
+      }
+      case 'object': {
+        const sl = e.slots || [];
+        let w = measure(Geo.objTitle(e), 13) + 34;
+        sl.forEach(s => w = Math.max(w, measure(Geo.slotText(s), 12) + 26));
+        return { w: Math.max(110, Math.round(w)), h: 28 + Math.max(1, sl.length) * 16 + 10 };
+      }
+      case 'role': return { w: Math.max(110, Math.round(measure(Geo.objTitle(e), 13) + 30)), h: 44 };
+      case 'participant': return e.variant === 'actor'
+        ? { w: 84, h: 78 }
+        : { w: Math.max(110, Math.round(measure(Geo.objTitle(e), 13) + 30)), h: 46 };
+      case 'usecase': return { w: Math.max(110, Math.round(measure(e.name, 12.5) * 0.62 + 60)), h: 56 };
+      case 'state': return {
+        w: Math.max(100, Math.round(Math.max(measure(e.name, 13) + 34, e.doActivity ? measure('do / ' + e.doActivity, 11.5) + 30 : 0))),
+        h: e.doActivity ? 58 : 46
+      };
+      case 'artifact': return { w: Math.max(110, Math.round(measure(e.name, 12.5) + 46)), h: 52 };
+      case 'node': return { w: Math.max(150, Math.round(measure(e.name, 13) + 60)), h: 96 };
+      case 'boundary': return { w: 200, h: 150 };
+      case 'fragment': return { w: 170, h: 80 };
+      case 'activation': return { w: 12, h: 20 };
+      case 'actor': return { w: 74, h: 96 };
+      case 'initial': return { w: 24, h: 24 };
+      case 'final': return { w: 28, h: 28 };
+      default: return { w: 80, h: 40 };
+    }
+  },
+  /* Mínimo de un contenedor teniendo en cuenta a sus hijos declarados. */
+  minSizeIn(d, e) {
+    const m = Geo.minSize(e);
+    if (!d || CONTAINERS.indexOf(e.type) < 0) return m;
+    let w = m.w, h = m.h;
+    Geo.childrenOf(d, e).forEach(c => {
+      const b = Geo.bounds(d, c);
+      w = Math.max(w, b.x - e.x + b.w + 14);
+      h = Math.max(h, b.y - e.y + b.h + 14);
+    });
+    return { w: Math.round(w), h: Math.round(h) };
+  },
+  childrenOf(d, e) { return (d.elements || []).filter(o => o.parentId === e.id); },
+  /* Hijos, nietos… con protección contra referencias circulares. */
+  descendants(d, e, acc, depth) {
+    acc = acc || []; depth = depth || 0;
+    if (depth > 12) return acc;
+    Geo.childrenOf(d, e).forEach(c => {
+      if (acc.indexOf(c) >= 0) return;
+      acc.push(c); Geo.descendants(d, c, acc, depth + 1);
+    });
+    return acc;
+  },
+
+  bounds(d, e) {
+    if (!e) return { x: 0, y: 0, w: 0, h: 0 };
+    if (e.type === 'activation') {
+      const o = d && (d.elements || []).find(p => p.id === e.owner);
+      const x = o ? Geo.lifelineX(d, o) : e.x;                 // siempre sobre su línea de vida
+      return { x: x - 6, y: e.y, w: 12, h: Math.max(20, e.h || 80) };
+    }
+    const m = Geo.minSize(e);
+    const fixedH = ['participant', 'actor', 'initial', 'final'].indexOf(e.type) >= 0;
+    return {
+      x: e.x, y: e.y,
+      w: Math.max(m.w, Math.round(e.w || 0)),
+      h: fixedH ? m.h : Math.max(m.h, Math.round(e.h || 0))
+    };
+  },
+  center(b) { return { x: b.x + b.w / 2, y: b.y + b.h / 2 }; },
+  lifelineX(d, p) { const b = Geo.bounds(d, p); return Math.round(b.x + b.w / 2); },
+  lifelineTop(d, p) { const b = Geo.bounds(d, p); return b.y + b.h; },
+  lifelineBottom(d) {
+    let m = 480;
+    (d.relations || []).forEach(r => { if (r.y) m = Math.max(m, r.y + 60); });
+    (d.elements || []).forEach(e => { if (e.type === 'activation') m = Math.max(m, e.y + (e.h || 80) + 40); if (e.type === 'fragment') m = Math.max(m, e.y + e.h + 40); });
+    return m;
+  },
+
+  /* Caja realmente ocupada por el dibujo (el actor reserva sitio abajo para
+     su nombre; las líneas no deben apuntar a ese hueco). */
+  shapeBox(d, e) {
+    const b = Geo.bounds(d, e);
+    if (e.type === 'node') return { x: b.x, y: b.y + 15, w: b.w - 15, h: b.h - 15 };   // cara frontal
+    if (e.type === 'actor') return { x: b.x + 14, y: b.y, w: b.w - 28, h: b.h - 24 };
+    if (e.type === 'participant' && e.variant === 'actor') return { x: b.x + 20, y: b.y, w: b.w - 40, h: b.h - 22 };
+    return b;
+  },
+  anchor(d, e, toPt) {
+    const b = Geo.shapeBox(d, e), c = Geo.center(b);
+    if (e.type === 'usecase') return Geo.ellipseAnchor(b, c, toPt);
+    if (e.type === 'initial' || e.type === 'final') return Geo.circleAnchor(b, c, toPt);
+    if (e.type === 'state') return Geo.roundRectAnchor(b, c, toPt, 13);
+    return Geo.rectAnchor(b, c, toPt);
+  },
+  /* Rectángulo redondeado: se busca el borde real, esquinas incluidas. */
+  roundRectAnchor(b, c, pt, rad) {
+    const r = Math.min(rad, b.w / 2, b.h / 2);
+    const inside = (p) => {
+      if (p.x < b.x || p.x > b.x + b.w || p.y < b.y || p.y > b.y + b.h) return false;
+      const dx = Math.max(b.x + r - p.x, 0, p.x - (b.x + b.w - r));
+      const dy = Math.max(b.y + r - p.y, 0, p.y - (b.y + b.h - r));
+      return dx === 0 || dy === 0 || dx * dx + dy * dy <= r * r;
+    };
+    const vx = pt.x - c.x, vy = pt.y - c.y, L = Math.hypot(vx, vy);
+    if (!L) return c;
+    const ux = vx / L, uy = vy / L;
+    let lo = 0, hi = Math.hypot(b.w, b.h) / 2 + 2;
+    for (let i = 0; i < 22; i++) {
+      const m = (lo + hi) / 2;
+      if (inside({ x: c.x + ux * m, y: c.y + uy * m })) lo = m; else hi = m;
+    }
+    return { x: c.x + ux * lo, y: c.y + uy * lo };
+  },
+  rectAnchor(b, c, pt) {
+    const dx = pt.x - c.x, dy = pt.y - c.y;
+    if (!dx && !dy) return c;
+    const sx = dx === 0 ? Infinity : (b.w / 2) / Math.abs(dx);
+    const sy = dy === 0 ? Infinity : (b.h / 2) / Math.abs(dy);
+    const s = Math.min(sx, sy);
+    return { x: c.x + dx * s, y: c.y + dy * s };
+  },
+  ellipseAnchor(b, c, pt) {
+    const dx = pt.x - c.x, dy = pt.y - c.y, a = b.w / 2, k = b.h / 2;
+    if (!dx && !dy) return c;
+    const t = 1 / Math.sqrt((dx * dx) / (a * a) + (dy * dy) / (k * k));
+    return { x: c.x + dx * t, y: c.y + dy * t };
+  },
+  circleAnchor(b, c, pt) {
+    const dx = pt.x - c.x, dy = pt.y - c.y, r = b.w / 2, L = Math.hypot(dx, dy) || 1;
+    return { x: c.x + dx / L * r, y: c.y + dy / L * r };
+  },
+  inside(b, p) { return p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h; },
+
+  /* ---------- ruteo de relaciones ---------- */
+  segHitsBox(a, b, box, pad) {
+    const p = pad || 6;
+    const r = { x: box.x - p, y: box.y - p, w: box.w + p * 2, h: box.h + p * 2 };
+    const x1 = Math.min(a.x, b.x), x2 = Math.max(a.x, b.x);
+    const y1 = Math.min(a.y, b.y), y2 = Math.max(a.y, b.y);
+    if (x2 < r.x || x1 > r.x + r.w || y2 < r.y || y1 > r.y + r.h) return false;
+    if (a.x === b.x || a.y === b.y) return true;                 // segmentos ortogonales
+    return Geo.distToSeg({ x: r.x + r.w / 2, y: r.y + r.h / 2 }, a, b) < Math.max(r.w, r.h) / 2;
+  },
+  /* ¿El segmento atraviesa algún elemento que no sea uno de los extremos? */
+  crossesAny(d, a, b, skip) {
+    return (d.elements || []).some(e => {
+      if (skip.indexOf(e.id) >= 0 || e.type === 'activation' || CONTAINERS.indexOf(e.type) >= 0) return false;
+      return Geo.segHitsBox(a, b, Geo.shapeBox(d, e));
+    });
+  },
+  sideX(b, right) { return right ? b.x + b.w : b.x; },
+  sideY(b, down) { return down ? b.y + b.h : b.y; },
+
+  /* Ruta ortogonal automática entre dos elementos: recta si están alineados,
+     con dos codos si no. El corredor intenta no cruzar otros elementos. */
+  /* ¿Alguna parte de la polilínea atraviesa un elemento ajeno? */
+  routeCrosses(d, pts, skip) {
+    for (let i = 1; i < pts.length; i++) if (Geo.crossesAny(d, pts[i - 1], pts[i], skip)) return true;
+    return false;
+  },
+  /* Primera ruta candidata que no atraviesa nada; si todas fallan, la primera. */
+  firstClear(d, cands, skip) {
+    for (let i = 0; i < cands.length; i++) if (!Geo.routeCrosses(d, cands[i], skip)) return cands[i];
+    return cands[0];
+  },
+
+  orthoRoute(d, A, B) {
+    const ba = Geo.shapeBox(d, A), bb = Geo.shapeBox(d, B);
+    const ca = Geo.center(ba), cb = Geo.center(bb);
+    const skip = [A.id, B.id];
+    const ovTop = Math.max(ba.y, bb.y), ovBot = Math.min(ba.y + ba.h, bb.y + bb.h);
+    const ovLef = Math.max(ba.x, bb.x), ovRig = Math.min(ba.x + ba.w, bb.x + bb.w);
+    if (ovBot - ovTop >= 18) {
+      const y = Math.round((ovTop + ovBot) / 2), right = cb.x > ca.x;
+      const recta = [{ x: Geo.sideX(ba, right), y: y }, { x: Geo.sideX(bb, !right), y: y }];
+      if (!Geo.routeCrosses(d, recta, skip)) return recta;
+      /* Hay algo en el medio: se rodea por arriba o por abajo. */
+      const lanes = Geo.lanes(d, ba, bb, skip, false);
+      const cands = lanes.map(yl => [
+        { x: Math.round(ca.x), y: Geo.sideY(ba, yl > ca.y) }, { x: Math.round(ca.x), y: yl },
+        { x: Math.round(cb.x), y: yl }, { x: Math.round(cb.x), y: Geo.sideY(bb, yl > cb.y) }
+      ]);
+      return Geo.firstClear(d, cands.concat([recta]), skip);
+    }
+    if (ovRig - ovLef >= 18) {
+      const x = Math.round((ovLef + ovRig) / 2), down = cb.y > ca.y;
+      const recta = [{ x: x, y: Geo.sideY(ba, down) }, { x: x, y: Geo.sideY(bb, !down) }];
+      if (!Geo.routeCrosses(d, recta, skip)) return recta;
+      const lanes = Geo.lanes(d, ba, bb, skip, true);
+      const cands = lanes.map(xl => [
+        { x: Geo.sideX(ba, xl > ca.x), y: Math.round(ca.y) }, { x: xl, y: Math.round(ca.y) },
+        { x: xl, y: Math.round(cb.y) }, { x: Geo.sideX(bb, xl > cb.x), y: Math.round(cb.y) }
+      ]);
+      return Geo.firstClear(d, cands.concat([recta]), skip);
+    }
+    const horiz = Math.abs(cb.x - ca.x) >= Math.abs(cb.y - ca.y);
+    if (horiz) {
+      const right = cb.x > ca.x;
+      const a0 = { x: Geo.sideX(ba, right), y: Math.round(ca.y) };
+      const b0 = { x: Geo.sideX(bb, !right), y: Math.round(cb.y) };
+      const cands = [Math.round((a0.x + b0.x) / 2), a0.x + (right ? 26 : -26), b0.x + (right ? -26 : 26)];
+      let xm = cands[0];
+      for (let i = 0; i < cands.length; i++) {
+        const k1 = { x: cands[i], y: a0.y }, k2 = { x: cands[i], y: b0.y };
+        if (!Geo.crossesAny(d, a0, k1, skip) && !Geo.crossesAny(d, k1, k2, skip) && !Geo.crossesAny(d, k2, b0, skip)) { xm = cands[i]; break; }
+      }
+      return [a0, { x: xm, y: a0.y }, { x: xm, y: b0.y }, b0];
+    }
+    const down = cb.y > ca.y;
+    const a0 = { x: Math.round(ca.x), y: Geo.sideY(ba, down) };
+    const b0 = { x: Math.round(cb.x), y: Geo.sideY(bb, !down) };
+    const cands = [Math.round((a0.y + b0.y) / 2), a0.y + (down ? 26 : -26), b0.y + (down ? -26 : 26)];
+    let ym = cands[0];
+    for (let i = 0; i < cands.length; i++) {
+      const k1 = { x: a0.x, y: cands[i] }, k2 = { x: b0.x, y: cands[i] };
+      if (!Geo.crossesAny(d, a0, k1, skip) && !Geo.crossesAny(d, k1, k2, skip) && !Geo.crossesAny(d, k2, b0, skip)) { ym = cands[i]; break; }
+    }
+    return [a0, { x: a0.x, y: ym }, { x: b0.x, y: ym }, b0];
+  },
+
+  /* Carriles candidatos para rodear los obstáculos que hay entre dos cajas:
+     por encima/por debajo (o izquierda/derecha si vertical es true). */
+  lanes(d, ba, bb, skip, vertical) {
+    const x1 = Math.min(ba.x, bb.x), x2 = Math.max(ba.x + ba.w, bb.x + bb.w);
+    const y1 = Math.min(ba.y, bb.y), y2 = Math.max(ba.y + ba.h, bb.y + bb.h);
+    let lo = vertical ? x1 : y1, hi = vertical ? x2 : y2;
+    (d.elements || []).forEach(e => {
+      if (skip.indexOf(e.id) >= 0 || e.type === 'activation' || CONTAINERS.indexOf(e.type) >= 0) return;
+      const b = Geo.shapeBox(d, e);
+      if (b.x > x2 || b.x + b.w < x1 || b.y > y2 || b.y + b.h < y1) return;   // fuera del corredor
+      lo = Math.min(lo, vertical ? b.x : b.y);
+      hi = Math.max(hi, vertical ? b.x + b.w : b.y + b.h);
+    });
+    return [Math.round(lo - 34), Math.round(hi + 34)];
+  },
+
+  /* Punto de salida ortogonal hacia un punto dado (para waypoints manuales). */
+  orthoEnd(d, e, t) {
+    const b = Geo.shapeBox(d, e), c = Geo.center(b);
+    if (t.y > b.y + 6 && t.y < b.y + b.h - 6) return { x: Geo.sideX(b, t.x > c.x), y: t.y };
+    if (t.x > b.x + 6 && t.x < b.x + b.w - 6) return { x: t.x, y: Geo.sideY(b, t.y > c.y) };
+    return Geo.anchor(d, e, t);
+  },
+  /* Inserta codos entre puntos que no están alineados. */
+  elbows(pts) {
+    const out = [pts[0]];
+    for (let i = 1; i < pts.length; i++) {
+      const a = out[out.length - 1], b = pts[i];
+      if (Math.abs(a.x - b.x) > 0.5 && Math.abs(a.y - b.y) > 0.5) out.push({ x: b.x, y: a.y });
+      out.push(b);
+    }
+    return out;
+  },
+
+  /* Polilínea completa de una relación: extremos anclados al borde real. */
+  /* Desplazamiento perpendicular de una relación cuando hay varias rectas
+     entre el mismo par de elementos. */
+  siblingOffset(d, r) {
+    if ((r.points || []).length || r.routing === 'orthogonal') return 0;
+    const sibs = (d.relations || []).filter(x => !(x.points || []).length && x.routing !== 'orthogonal' &&
+      ((x.from === r.from && x.to === r.to) || (x.from === r.to && x.to === r.from)));
+    if (sibs.length < 2) return 0;
+    return (sibs.indexOf(r) - (sibs.length - 1) / 2) * 18;
+  },
+
+  route(d, r) {
+    const A = byIdIn(d, r.from), B = byIdIn(d, r.to);
+    if (!A || !B) return null;
+    const mids = (r.points || []).filter(p => p && isFinite(p.x) && isFinite(p.y)).map(p => ({ x: +p.x, y: +p.y }));
+    const ortho = r.routing === 'orthogonal';
+    if (!mids.length) {
+      if (ortho) return Geo.orthoRoute(d, A, B);
+      const ca = Geo.center(Geo.shapeBox(d, A)), cb = Geo.center(Geo.shapeBox(d, B));
+      let p1 = Geo.anchor(d, A, cb), p2 = Geo.anchor(d, B, ca);
+      const off = Geo.siblingOffset(d, r);
+      if (off) {
+        /* Se apunta a un objetivo corrido en perpendicular: las dos líneas se
+           separan pero cada extremo sigue apoyado en el borde de su elemento. */
+        const a = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+        const q1 = { x: p1.x + Math.cos(a + Math.PI / 2) * off, y: p1.y + Math.sin(a + Math.PI / 2) * off };
+        const q2 = { x: p2.x + Math.cos(a + Math.PI / 2) * off, y: p2.y + Math.sin(a + Math.PI / 2) * off };
+        p1 = Geo.anchor(d, A, q1); p2 = Geo.anchor(d, B, q2);
+      }
+      return [p1, p2];
+    }
+    if (ortho) {
+      const p1 = Geo.orthoEnd(d, A, mids[0]), p2 = Geo.orthoEnd(d, B, mids[mids.length - 1]);
+      return Geo.elbows([p1].concat(mids, [p2]));
+    }
+    return [Geo.anchor(d, A, mids[0])].concat(mids, [Geo.anchor(d, B, mids[mids.length - 1])]);
+  },
+  /* Longitud acumulada y punto medio real de una polilínea. */
+  polyMid(pts) {
+    let total = 0;
+    for (let i = 1; i < pts.length; i++) total += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+    let half = total / 2;
+    for (let i = 1; i < pts.length; i++) {
+      const L = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+      if (half <= L || i === pts.length - 1) {
+        const t = L ? half / L : 0;
+        return {
+          x: pts[i - 1].x + (pts[i].x - pts[i - 1].x) * t,
+          y: pts[i - 1].y + (pts[i].y - pts[i - 1].y) * t,
+          ang: Math.atan2(pts[i].y - pts[i - 1].y, pts[i].x - pts[i - 1].x)
+        };
+      }
+      half -= L;
+    }
+    return { x: pts[0].x, y: pts[0].y, ang: 0 };
+  },
+  inEllipse(b, p) {
+    const dx = (p.x - (b.x + b.w / 2)) / (b.w / 2), dy = (p.y - (b.y + b.h / 2)) / (b.h / 2);
+    return dx * dx + dy * dy <= 1;
+  },
+  distToSeg(p, a, b) {
+    const dx = b.x - a.x, dy = b.y - a.y, L = dx * dx + dy * dy;
+    let t = L ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / L : 0;
+    t = clamp(t, 0, 1);
+    return Math.hypot(p.x - (a.x + dx * t), p.y - (a.y + dy * t));
+  },
+  contentBox(d) {
+    let x1 = 1e9, y1 = 1e9, x2 = -1e9, y2 = -1e9, any = false;
+    (d.elements || []).forEach(e => {
+      const b = Geo.bounds(d, e); any = true;
+      x1 = Math.min(x1, b.x); y1 = Math.min(y1, b.y);
+      x2 = Math.max(x2, b.x + b.w); y2 = Math.max(y2, b.y + b.h);
+      if (d.type === 'sequence' && e.type === 'participant') y2 = Math.max(y2, Geo.lifelineBottom(d));
+    });
+    if (!any) return { x: 0, y: 0, w: 600, h: 400 };
+    return { x: x1, y: y1, w: Math.max(40, x2 - x1), h: Math.max(40, y2 - y1) };
+  }
+};
+
+/* ---------- historial ---------- */
+class HistoryManager {
+  constructor(limit) { this.limit = limit || 60; this.stack = []; this.i = -1; }
+  reset(state) { this.stack = [clone(state)]; this.i = 0; }
+  push(state) {
+    this.stack = this.stack.slice(0, this.i + 1);
+    this.stack.push(clone(state));
+    if (this.stack.length > this.limit) this.stack.shift();
+    this.i = this.stack.length - 1;
+  }
+  canUndo() { return this.i > 0; }
+  canRedo() { return this.i < this.stack.length - 1; }
+  undo() { if (!this.canUndo()) return null; this.i--; return clone(this.stack[this.i]); }
+  redo() { if (!this.canRedo()) return null; this.i++; return clone(this.stack[this.i]); }
+}
+
+/* ---------- almacenamiento ---------- */
+const KEY = 'miniuml.project.v1', KEY_UI = 'miniuml.ui.v1';
+const StorageManager = {
+  save(doc) { try { localStorage.setItem(KEY, JSON.stringify(doc)); return true; } catch (e) { return false; } },
+  load() {
+    try { const s = localStorage.getItem(KEY); return s ? Doc.validate(JSON.parse(s)) : null; }
+    catch (e) { return null; }
+  },
+  saveUI(o) { try { localStorage.setItem(KEY_UI, JSON.stringify(o)); } catch (e) { } },
+  loadUI() { try { return JSON.parse(localStorage.getItem(KEY_UI) || '{}') || {}; } catch (e) { return {}; } }
+};
+
+/* ---------- documento del proyecto ---------- */
+const Doc = {
+  empty(name) {
+    const d = Doc.newDiagram('class', 'Diagrama de Clases');
+    return {
+      application: APP_NAME, version: APP_VERSION,
+      project: { id: uid('p'), name: name || 'Proyecto sin título', created: nowName(), diagrams: [d], activeId: d.id }
+    };
+  },
+  newDiagram(type, name) {
+    return {
+      id: uid('d'), type: type, name: name || DIAGRAMS[type].short,
+      options: { numbered: type === 'sequence' || type === 'communication' },
+      elements: [], relations: []
+    };
+  },
+  /* Contenedor que corresponde a un elemento según dónde está su centro.
+     Devuelve el más pequeño de los compatibles, para que un nodo dentro de
+     otro nodo capture al artefacto que tiene encima. */
+  containerAt(d, e, strict) {
+    const cands = PARENT_OF[e.type];
+    if (!cands || !cands.length) return null;
+    const b = Geo.bounds(d, e), c = Geo.center(b);
+    let best = null, area = Infinity;
+    (d.elements || []).forEach(o => {
+      if (o.id === e.id || cands.indexOf(o.type) < 0) return;
+      const ob = Geo.bounds(d, o);
+      /* Al soltar basta con el centro; al deducir la contención de un archivo
+         viejo se exige que el elemento entre entero, para no adoptar de más. */
+      const ok = strict
+        ? (b.x >= ob.x && b.y >= ob.y && b.x + b.w <= ob.x + ob.w && b.y + b.h <= ob.y + ob.h)
+        : Geo.inside(ob, c);
+      if (!ok) return;
+      let up = o, guard = 0;                                  // no adoptar a un ancestro propio
+      while (up && guard++ < 12) { if (up.id === e.id) return; up = byIdIn(d, up.parentId); }
+      const a = ob.w * ob.h;
+      if (a < area) { area = a; best = o; }
+    });
+    return best;
+  },
+
+  /* Fragmento que encierra a un mensaje (el más chico, si hay anidados). */
+  fragmentAt(d, r) {
+    const A = byIdIn(d, r.from), B = byIdIn(d, r.to);
+    if (!A || !B) return null;
+    const x = (Geo.lifelineX(d, A) + Geo.lifelineX(d, B)) / 2, y = r.y || 0;
+    let best = null, area = Infinity;
+    (d.elements || []).forEach(e => {
+      if (e.type !== 'fragment') return;
+      const b = Geo.bounds(d, e);
+      if (x < b.x || x > b.x + b.w || y < b.y || y > b.y + b.h) return;
+      const a = b.w * b.h;
+      if (a < area) { area = a; best = e; }
+    });
+    return best;
+  },
+  /* Vincula un mensaje al fragmento que lo contiene (contención explícita). */
+  assignFragment(d, r) {
+    if (!d || d.type !== 'sequence' || ['message', 'return'].indexOf(r.type) < 0) return;
+    const f = Doc.fragmentAt(d, r);
+    if (f) r.parentId = f.id; else delete r.parentId;
+  },
+  assignFragments(d) {
+    if (!d || d.type !== 'sequence') return;
+    (d.relations || []).forEach(r => Doc.assignFragment(d, r));
+  },
+
+  /* Numeración estable de los mensajes de secuencia: manda el orden vertical y,
+     ante un empate, el número que ya tenían. */
+  renumber(d) {
+    if (!d || d.type !== 'sequence') return [];
+    const ms = (d.relations || []).slice()
+      .sort((a, b) => (a.y || 0) - (b.y || 0) || (a.seq || 0) - (b.seq || 0));
+    ms.forEach((r, i) => { r.seq = i + 1; });
+    return ms;
+  },
+
+  /* Comprueba y normaliza un documento cargado; lanza error si no es válido.
+     Cada diagrama se valida por separado (no se usan índices del arreglo
+     original) y lo que queda nunca puede referenciar algo inexistente. */
+  validate(raw) {
+    if (!raw || typeof raw !== 'object') throw new Error('vacío');
+    const pr = raw.project;
+    if (!pr || !Array.isArray(pr.diagrams)) throw new Error('estructura');
+
+    const dropped = { diagrams: 0, elements: 0, relations: 0 };
+    const used = {};
+    const uniq = (id, pre) => {
+      let v = (typeof id === 'string' && id) ? id : uid(pre);
+      if (used[v]) v = uid(pre);
+      used[v] = 1; return v;
+    };
+    const num = (v, def) => { const n = typeof v === 'number' ? v : parseFloat(v); return isFinite(n) ? n : (def || 0); };
+    const str = (v) => v == null ? '' : String(v);
+    const arr = (v) => Array.isArray(v) ? v : [];
+    const diagrams = [];
+
+    pr.diagrams.forEach(src => {
+      if (!src || typeof src !== 'object' || !DIAGRAMS[src.type]) { dropped.diagrams++; return; }
+      const type = src.type;
+      const d = {
+        id: uniq(src.id, 'd'), type: type, name: str(src.name) || DIAGRAMS[type].short,
+        options: { numbered: (src.options && typeof src.options.numbered === 'boolean') ? src.options.numbered : (type === 'sequence' || type === 'communication') },
+        elements: [], relations: []
+      };
+
+      /* 1. elementos: el tipo tiene que existir y pertenecer a este diagrama */
+      arr(src.elements).forEach(o => {
+        if (!o || typeof o !== 'object' || !EDEF[o.type] || ALLOWED_EL[type].indexOf(o.type) < 0) { dropped.elements++; return; }
+        const e = Object.assign({}, clone(EDEF[o.type]), clone(o));
+        e.id = uniq(o.id, o.type);
+        e.x = Math.round(num(e.x, 0)); e.y = Math.round(num(e.y, 0));
+        e.w = Math.max(8, Math.round(num(e.w, EDEF[o.type].w)));
+        e.h = Math.max(8, Math.round(num(e.h, EDEF[o.type].h)));
+        e.name = str(e.name);
+        if (e.type === 'class' || e.type === 'interface') {
+          e.attributes = arr(e.attributes).map(a => ({ vis: VIS_ANY.indexOf(str(a && a.vis)) >= 0 ? str(a.vis) : '-', name: str(a && a.name), type: str(a && a.type) }));
+          e.methods = arr(e.methods).map(m => ({ vis: VIS_ANY.indexOf(str(m && m.vis)) >= 0 ? str(m.vis) : '+', name: str(m && m.name), params: str(m && m.params), ret: str(m && m.ret) }));
+          e.stereotype = str(e.stereotype); e.abstract = !!e.abstract;
+        }
+        if (e.type === 'object' || e.type === 'role') {
+          e.className = str(e.className);
+          e.slots = arr(e.slots).map(v => ({ name: str(v && v.name), value: str(v && v.value) }));
+        }
+        if (e.type === 'participant') { e.variant = e.variant === 'actor' ? 'actor' : 'object'; e.className = str(e.className); }
+        if (e.type === 'fragment') {
+          e.op = ['alt', 'opt', 'loop', 'par', 'ref'].indexOf(e.op) >= 0 ? e.op : 'alt';
+          e.guard = str(e.guard); e.guard2 = str(e.guard2); e.split = num(e.split, 0.5);
+        }
+        if (e.type === 'state') e.doActivity = str(e.doActivity);
+        if (e.type === 'node' || e.type === 'artifact') e.stereotype = str(e.stereotype);
+        d.elements.push(e);
+      });
+
+      const map = {};
+      d.elements.forEach(e => { map[e.id] = e; });
+
+      /* Filas del panel «Diseño Orientado a Objetos»: solo se guarda lo mínimo,
+         una referencia por cada clase ya creada y el texto de las que no. */
+      if (type === 'class') {
+        const filas = arr(src.oop).map(r => {
+          if (!r || typeof r !== 'object') return null;
+          if (r.ref) return map[r.ref] && map[r.ref].type === 'class' ? { ref: str(r.ref) } : null;
+          const f = { name: str(r.name), attrs: str(r.attrs), methods: str(r.methods) };
+          return (f.name || f.attrs || f.methods) ? f : null;
+        }).filter(Boolean);
+        if (filas.length) d.oop = filas;
+      }
+
+      /* 2. activaciones huérfanas: su propietario debe ser un participante real */
+      d.elements = d.elements.filter(e => {
+        if (e.type !== 'activation') return true;
+        const o = map[e.owner];
+        if (!o || o.type !== 'participant') { delete map[e.id]; dropped.elements++; return false; }
+        return true;
+      });
+
+      /* 3. contenedores: la referencia debe existir, aceptar ese hijo y no ciclar */
+      d.elements.forEach(e => {
+        if (!e.parentId) { delete e.parentId; return; }
+        const p = map[e.parentId];
+        if (!p || p.id === e.id || !CONTAINS[p.type] || CONTAINS[p.type].indexOf(e.type) < 0) { delete e.parentId; return; }
+        let up = p, guard = 0;
+        while (up && up.parentId && guard++ < 20) {
+          if (up.parentId === e.id) { delete e.parentId; return; }
+          up = map[up.parentId];
+        }
+      });
+
+      /* 3b. archivos de la versión 1.0: no traían contención explícita, así que
+         se deduce una sola vez y queda guardada a partir de ahora. */
+      d.elements.forEach(e => {
+        if (e.parentId || !PARENT_OF[e.type]) return;
+        const host = Doc.containerAt(d, e, true);
+        if (host) e.parentId = host.id;
+      });
+
+      /* 4. relaciones: tipo admitido, extremos vivos y combinación válida en UML */
+      arr(src.relations).forEach(o => {
+        if (!o || typeof o !== 'object' || !RDEF[o.type] || ALLOWED_REL[type].indexOf(o.type) < 0) { dropped.relations++; return; }
+        const A = map[o.from], B = map[o.to];
+        if (!A || !B || !relationCheck(type, o.type, A, B).ok) { dropped.relations++; return; }
+        const r = Object.assign({ label: '' }, clone(o));
+        r.id = uniq(o.id, 'r'); r.label = str(r.label);
+        /* Nombres nuevos de los extremos; los proyectos anteriores usaban
+           fromMult/toMult/fromRole/toRole/navigable y se migran acá. */
+        if (RDEF[r.type].mult) {
+          r.sourceMultiplicity = str(r.sourceMultiplicity != null && r.sourceMultiplicity !== '' ? r.sourceMultiplicity : r.fromMult);
+          r.targetMultiplicity = str(r.targetMultiplicity != null && r.targetMultiplicity !== '' ? r.targetMultiplicity : r.toMult);
+          r.sourceRole = str(r.sourceRole != null && r.sourceRole !== '' ? r.sourceRole : r.fromRole);
+          r.targetRole = str(r.targetRole != null && r.targetRole !== '' ? r.targetRole : r.toRole);
+          r.sourceNavigable = !!r.sourceNavigable;
+          r.targetNavigable = r.targetNavigable != null ? !!r.targetNavigable : !!r.navigable;
+        }
+        delete r.fromMult; delete r.toMult; delete r.fromRole; delete r.toRole; delete r.navigable;
+        r.points = arr(r.points).map(q => ({ x: Math.round(num(q && q.x, 0)), y: Math.round(num(q && q.y, 0)) }))
+          .filter(q => isFinite(q.x) && isFinite(q.y));
+        r.routing = r.routing === 'orthogonal' ? 'orthogonal' : 'direct';
+        if (r.labelPosition && isFinite(num(r.labelPosition.dx, NaN)) && isFinite(num(r.labelPosition.dy, NaN))) {
+          r.labelPosition = { dx: Math.round(num(r.labelPosition.dx, 0)), dy: Math.round(num(r.labelPosition.dy, 0)) };
+        } else delete r.labelPosition;
+        if (r.type === 'transition') { r.event = str(r.event); r.guard = str(r.guard); r.action = str(r.action); }
+        if (r.type === 'connector') {
+          r.messages = arr(r.messages).map(m => ({ n: str(m && m.n), text: str(m && m.text), dir: (m && m.dir === 'ba') ? 'ba' : 'ab' }));
+        }
+        if (type === 'sequence') {
+          r.y = Math.round(num(r.y, 150)); r.seq = Math.round(num(r.seq, 0));
+          const f = r.parentId ? map[r.parentId] : null;      // solo un fragmento del mismo diagrama
+          if (!f || f.type !== 'fragment') delete r.parentId;
+        } else delete r.parentId;
+        d.relations.push(r);
+      });
+
+      if (type === 'sequence') {
+        /* Archivos anteriores: se deduce una vez qué mensajes encierra cada fragmento. */
+        d.relations.forEach(r => { if (!r.parentId) Doc.assignFragment(d, r); });
+      }
+      Doc.renumber(d);
+      diagrams.push(d);
+    });
+
+    if (!diagrams.length) throw new Error('sin diagramas');
+    Doc.lastReport = dropped;
+    return {
+      application: APP_NAME, version: raw.version || APP_VERSION,
+      project: {
+        id: uniq(pr.id, 'p'), name: str(pr.name) || 'Proyecto', created: str(pr.created) || nowName(),
+        diagrams: diagrams,
+        activeId: diagrams.some(d => d.id === pr.activeId) ? pr.activeId : diagrams[0].id
+      }
+    };
+  },
+  lastReport: { diagrams: 0, elements: 0, relations: 0 },
+  droppedCount() { const r = Doc.lastReport || {}; return (r.diagrams || 0) + (r.elements || 0) + (r.relations || 0); }
+};
+
+/* Búsqueda de un elemento por id dentro de un diagrama (sin depender de la app). */
+function byIdIn(d, id) { return id ? (d.elements || []).find(e => e.id === id) || null : null; }
+
+/* =========================================================================
+   Diseño Orientado a Objetos: tabla Clase / Atributos / Métodos.
+   No es un modelo aparte: cada fila apunta a una clase real del diagrama y
+   el texto se traduce a la misma estructura {vis, name, type} que ya usa
+   MiniUML. Lo único que se guarda a parte son las filas todavía no creadas.
+   ========================================================================= */
+const Oop = {
+  /* ---------- texto <-> modelo ---------- */
+  /* Una línea puede venir como «- nombre : String», «nombre» o «+ pagar(x) : void».
+     Se conserva lo que el usuario escribió; no se completan tipos ni visibilidad. */
+  splitVis(line) {
+    const t = String(line == null ? '' : line).trim();
+    const c = t.charAt(0);
+    if (VIS.indexOf(c) >= 0) return { vis: c, rest: t.slice(1).trim() };
+    return { vis: '', rest: t };
+  },
+  parseAttr(line) {
+    const v = Oop.splitVis(line);
+    const i = v.rest.indexOf(':');
+    if (i < 0) return { vis: v.vis, name: v.rest, type: '' };
+    return { vis: v.vis, name: v.rest.slice(0, i).trim(), type: v.rest.slice(i + 1).trim() };
+  },
+  parseMethod(line) {
+    const v = Oop.splitVis(line);
+    const a = v.rest.indexOf('('), b = v.rest.lastIndexOf(')');
+    if (a >= 0 && b > a) {
+      const resto = v.rest.slice(b + 1).trim();
+      const ret = resto.charAt(0) === ':' ? resto.slice(1).trim() : (resto || '');
+      return { vis: v.vis, name: v.rest.slice(0, a).trim(), params: v.rest.slice(a + 1, b).trim(), ret: ret };
+    }
+    const i = v.rest.indexOf(':');
+    if (i < 0) return { vis: v.vis, name: v.rest, params: '', ret: '' };
+    return { vis: v.vis, name: v.rest.slice(0, i).trim(), params: '', ret: v.rest.slice(i + 1).trim() };
+  },
+  /* Cada línea no vacía es un atributo o un método; se respeta el orden escrito. */
+  parseList(text, kind) {
+    return String(text == null ? '' : text).split(/\r?\n/)
+      .map(l => l.trim()).filter(l => l.length)
+      .map(l => kind === 'meth' ? Oop.parseMethod(l) : Oop.parseAttr(l));
+  },
+  attrsText(e) { return (e.attributes || []).map(Geo.attrText).join('\n'); },
+  methodsText(e) { return (e.methods || []).map(Geo.methText).join('\n'); },
+
+  /* ---------- filas ---------- */
+  rowFrom(e) {
+    return { rid: uid('fila'), ref: e.id, name: e.name || '', attrs: Oop.attrsText(e), methods: Oop.methodsText(e) };
+  },
+  emptyRow() { return { rid: uid('fila'), ref: null, name: '', attrs: '', methods: '' }; },
+  /* Reconstruye la tabla: primero el orden guardado, después cualquier clase
+     del diagrama que todavía no esté en la tabla (proyectos anteriores). */
+  rowsFrom(d) {
+    const rows = [], used = {};
+    if (!d || d.type !== 'class') return rows;
+    (d.oop || []).forEach(r => {
+      if (r.ref) {
+        const e = byIdIn(d, r.ref);
+        if (!e || e.type !== 'class' || used[e.id]) return;
+        used[e.id] = 1; rows.push(Oop.rowFrom(e));
+      } else {
+        rows.push({ rid: uid('fila'), ref: null, name: r.name || '', attrs: r.attrs || '', methods: r.methods || '' });
+      }
+    });
+    (d.elements || []).forEach(e => {
+      if (e.type !== 'class' || used[e.id]) return;
+      used[e.id] = 1; rows.push(Oop.rowFrom(e));
+    });
+    return rows;
+  },
+  /* Guarda en el documento lo mínimo para volver a armar la tabla. */
+  save(d, rows) {
+    if (!d || d.type !== 'class') return;
+    const out = [];
+    (rows || []).forEach(r => {
+      if (r.ref && byIdIn(d, r.ref)) { out.push({ ref: r.ref }); return; }
+      if ((r.name || '').trim() || (r.attrs || '').trim() || (r.methods || '').trim()) {
+        out.push({ name: r.name || '', attrs: r.attrs || '', methods: r.methods || '' });
+      }
+    });
+    if (out.length) d.oop = out; else delete d.oop;
+  },
+
+  /* ---------- colocación de las clases nuevas ---------- */
+  /* Cuadrícula determinista debajo de lo que ya hay en el lienzo. */
+  place(d, news) {
+    const previos = (d.elements || []).filter(e => news.indexOf(e) < 0);
+    let x0 = 60, y0 = 60;
+    if (previos.length) {
+      let x1 = 1e9, y2 = -1e9;
+      previos.forEach(e => { const b = Geo.bounds(d, e); x1 = Math.min(x1, b.x); y2 = Math.max(y2, b.y + b.h); });
+      x0 = Math.round(x1 / 10) * 10; y0 = Math.round((y2 + 60) / 10) * 10;
+    }
+    let x = x0, y = y0, altoFila = 0, col = 0;
+    news.forEach(e => {
+      e.x = x; e.y = y;                                  // bounds necesita la posición
+      const m = Geo.bounds(d, e);                        // tamaño real dibujado, no el mínimo
+      if (col >= 3 || (col > 0 && x + m.w > x0 + 1240)) { x = x0; y += altoFila + 70; altoFila = 0; col = 0; e.x = x; e.y = y; }
+      x += Math.round((m.w + 80) / 10) * 10;
+      altoFila = Math.max(altoFila, m.h);
+      col++;
+    });
+  },
+
+  /* ---------- sincronización tabla -> modelo -> diagrama ---------- */
+  check(rows) {
+    const vistos = {};
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i], nombre = (r.name || '').trim();
+      if (!nombre) {
+        if ((r.attrs || '').trim() || (r.methods || '').trim()) return { error: 'sinNombre', rid: r.rid, fila: i + 1 };
+        continue;
+      }
+      const k = nombre.toLowerCase();
+      if (vistos[k]) return { error: 'duplicada', rid: r.rid, nombre: nombre };
+      vistos[k] = 1;
+    }
+    return null;
+  },
+  sync(d, rows) {
+    const mal = Oop.check(rows);
+    if (mal) return mal;
+    let creadas = 0, actualizadas = 0;
+    const news = [];
+    rows.forEach(r => {
+      const nombre = (r.name || '').trim();
+      if (!nombre) return;
+      const atts = Oop.parseList(r.attrs, 'attr'), mets = Oop.parseList(r.methods, 'meth');
+      let e = r.ref ? byIdIn(d, r.ref) : null;
+      if (e && e.type !== 'class') e = null;
+      if (!e) e = (d.elements || []).find(x => x.type === 'class' && (x.name || '').trim().toLowerCase() === nombre.toLowerCase());
+      if (e) {
+        /* Se tocan solo nombre, atributos y métodos: id, posición, tamaño,
+           estereotipo y todo lo demás quedan como estaban. */
+        const cambio = e.name !== nombre ||
+          JSON.stringify(e.attributes || []) !== JSON.stringify(atts) ||
+          JSON.stringify(e.methods || []) !== JSON.stringify(mets);
+        e.name = nombre; e.attributes = atts; e.methods = mets;
+        r.ref = e.id;
+        if (cambio) actualizadas++;
+      } else {
+        const ne = ElementFactory.create('class', 0, 0);
+        ne.name = nombre; ne.attributes = atts; ne.methods = mets;
+        d.elements.push(ne); news.push(ne); r.ref = ne.id; creadas++;
+      }
+    });
+    if (news.length) Oop.place(d, news);
+    Oop.save(d, rows);
+    return { creadas: creadas, actualizadas: actualizadas };
+  },
+
+  /* ---------- copiado ---------- */
+  usables(rows) { return (rows || []).filter(r => (r.name || '').trim()); },
+  html(rows) {
+    const esc2 = (s) => String(s == null ? '' : s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    const lineas = (s) => esc2(s).split(/\r?\n/).filter(l => l.trim()).join('<br>');
+    const th = 'border:1px solid #808080;padding:6px 10px;background:#e8eaee;font-weight:bold;text-align:left;font-family:Segoe UI,Arial,sans-serif;font-size:11pt';
+    const td = 'border:1px solid #808080;padding:6px 10px;vertical-align:top;font-family:Segoe UI,Arial,sans-serif;font-size:11pt';
+    let h = '<table style="border-collapse:collapse;border:1px solid #808080">' +
+      '<thead><tr><th style="' + th + '">Clase</th><th style="' + th + '">Atributos</th><th style="' + th + '">Métodos</th></tr></thead><tbody>';
+    Oop.usables(rows).forEach(r => {
+      h += '<tr><td style="' + td + '"><b>' + esc2((r.name || '').trim()) + '</b></td>' +
+        '<td style="' + td + '">' + lineas(r.attrs) + '</td>' +
+        '<td style="' + td + '">' + lineas(r.methods) + '</td></tr>';
+    });
+    return h + '</tbody></table>';
+  },
+  text(rows) {
+    const bloques = Oop.usables(rows).map(r => {
+      const at = String(r.attrs || '').split(/\r?\n/).filter(l => l.trim());
+      const me = String(r.methods || '').split(/\r?\n/).filter(l => l.trim());
+      return 'Clase: ' + (r.name || '').trim() + '\n' +
+        'Atributos:\n' + (at.length ? at.map(l => l.trim()).join('\n') : '(ninguno)') + '\n\n' +
+        'Métodos:\n' + (me.length ? me.map(l => l.trim()).join('\n') : '(ninguno)');
+    });
+    return 'Diseño Orientado a Objetos\n\n' + bloques.join('\n\n---\n\n') + '\n';
+  }
+};
+
+/* Portapapeles: se intenta la API moderna con HTML y, si el navegador no
+   deja, se cae a una selección temporal. Nunca rompe la aplicación. */
+const Clip = {
+  async rich(html, text) {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+        await navigator.clipboard.write([new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([text], { type: 'text/plain' })
+        })]);
+        return true;
+      }
+    } catch (e) { }
+    try {
+      const host = document.createElement('div');
+      host.setAttribute('contenteditable', 'true');
+      host.style.cssText = 'position:fixed;left:-10000px;top:0;opacity:0';
+      host.innerHTML = html;
+      document.body.appendChild(host);
+      const sel = window.getSelection(), rg = document.createRange();
+      rg.selectNodeContents(host);
+      sel.removeAllRanges(); sel.addRange(rg);
+      const listo = !!(document.execCommand && document.execCommand('copy'));
+      sel.removeAllRanges(); host.remove();
+      if (listo) return true;
+    } catch (e) { }
+    return await Clip.plain(text);
+  },
+  async plain(text) {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (e) { }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;left:-10000px;top:0';
+      document.body.appendChild(ta);
+      ta.select();
+      const listo = !!(document.execCommand && document.execCommand('copy'));
+      ta.remove();
+      return listo;
+    } catch (e) { }
+    return false;
+  }
+};
+/* =========================================================================
+   3. Dibujo: representación UML de cada elemento y de cada relación
+   ========================================================================= */
+
+const byId = (d, id) => (d.elements || []).find(e => e.id === id);
+const ptAt = (p, a, dist, perp) => ({
+  x: p.x + Math.cos(a) * dist + Math.cos(a + Math.PI / 2) * (perp || 0),
+  y: p.y + Math.sin(a) * dist + Math.sin(a + Math.PI / 2) * (perp || 0)
+});
+function wrapText(s, max, maxLines) {
+  const words = String(s || '').split(/\s+/).filter(Boolean), lines = [];
+  let cur = '';
+  words.forEach(w => {
+    if (!cur) cur = w;
+    else if ((cur + ' ' + w).length <= max) cur += ' ' + w;
+    else { lines.push(cur); cur = w; }
+  });
+  if (cur) lines.push(cur);
+  if (lines.length > maxLines) {
+    const rest = lines.slice(maxLines - 1).join(' ');
+    return lines.slice(0, maxLines - 1).concat([rest]);
+  }
+  return lines.length ? lines : [''];
+}
+
+const Render = {
+
+  /* Etiqueta legible sobre una línea: recuadro blanco + texto. */
+  tag(x, y, s, o) {
+    o = o || {};
+    const size = o.size || 11.5, w = measure(s, size) + 9, h = size + 5;
+    const g = el('g');
+    const x0 = o.anchor === 'middle' ? x - w / 2 : x - 4;
+    Render._tags.push({ x: x0, y: y - size + 1, w: w, h: h });
+    const e = Render._ext;                       // extensión real del dibujo, etiquetas incluidas
+    e.x1 = Math.min(e.x1, x0); e.y1 = Math.min(e.y1, y - size + 1);
+    e.x2 = Math.max(e.x2, x0 + w); e.y2 = Math.max(e.y2, y + 5);
+    g.appendChild(el('rect', { x: x0, y: y - size + 1, width: w, height: h, fill: P.fill, rx: 2 }));
+    g.appendChild(txt(x, y, s, { size: size, anchor: o.anchor, fill: o.fill }));
+    return g;
+  },
+
+  /* Busca un sitio libre para una etiqueta: si el punto cae sobre otro
+     elemento del diagrama, la desplaza perpendicularmente a la línea. */
+  _tags: [], _labels: {}, _ext: { x1: 1e9, y1: 1e9, x2: -1e9, y2: -1e9 },
+  /* ¿Hay un elemento u otra etiqueta ya dibujada en ese punto? */
+  busyAt(d, q, w, skip) {
+    const hitEl = (d.elements || []).some(e => {
+      if ((skip || []).indexOf(e.id) >= 0 || e.type === 'activation') return false;
+      const b = Geo.bounds(d, e);
+      return q.x + w / 2 > b.x && q.x - w / 2 < b.x + b.w && q.y + 9 > b.y && q.y - 9 < b.y + b.h;
+    });
+    if (hitEl) return true;
+    return Render._tags.some(t =>
+      q.x + w / 2 > t.x && q.x - w / 2 < t.x + t.w && q.y + 9 > t.y && q.y - 9 < t.y + t.h);
+  },
+  freeSpot(d, pt, ang, skip, w) {
+    if (!Render.busyAt(d, pt, w, skip)) return pt;
+    for (let i = 1; i <= 3; i++) {
+      const a = ptAt(pt, ang, 0, -i * 15), b = ptAt(pt, ang, 0, i * 15);
+      if (!Render.busyAt(d, a, w, skip)) return a;
+      if (!Render.busyAt(d, b, w, skip)) return b;
+    }
+    return pt;
+  },
+
+  /* Título centrado; los nombres de instancia van subrayados. */
+  title(g, cx, y, s, size, underline) {
+    g.appendChild(txt(cx, y, s, { anchor: 'middle', size: size, weight: '600' }));
+    if (underline && s) {
+      const w = measure(s, size) * 1.07;
+      g.appendChild(line(cx - w / 2, y + 3, cx + w / 2, y + 3, { 'stroke-width': 1.1 }));
+    }
+  },
+
+  /* ---------------- elementos ---------------- */
+  element(d, e) {
+    const b = Geo.bounds(d, e);
+    const g = el('g', { 'data-id': e.id });
+    const box = (o) => el('rect', Object.assign({ x: b.x, y: b.y, width: b.w, height: b.h, fill: P.fill, stroke: P.ink, 'stroke-width': 1.5 }, o || {}));
+    const cx = b.x + b.w / 2;
+
+    switch (e.type) {
+      case 'actor': case 'participant_actor': {
+        Render.actorFigure(g, b, e.name, 1);
+        break;
+      }
+      case 'usecase': {
+        g.appendChild(el('ellipse', { cx: cx, cy: b.y + b.h / 2, rx: b.w / 2, ry: b.h / 2, fill: P.fill, stroke: P.ink, 'stroke-width': 1.5 }));
+        const ls = wrapText(e.name, 22, 2);
+        ls.forEach((L, i) => g.appendChild(txt(cx, b.y + b.h / 2 + 4.5 + (i - (ls.length - 1) / 2) * 14, L, { anchor: 'middle', size: 12.5 })));
+        break;
+      }
+      case 'boundary': {
+        g.appendChild(box({ fill: P.fill, stroke: P.muted, rx: 3 }));
+        g.appendChild(txt(cx, b.y + 21, e.name, { anchor: 'middle', size: 13, weight: '600', fill: P.muted }));
+        break;
+      }
+      case 'class': case 'interface': {
+        const head = Geo.classHead(e), at = e.attributes || [], me = e.methods || [];
+        const aH = Math.max(1, at.length) * 16 + 10;
+        g.appendChild(box({ rx: 2 }));
+        let ty = b.y + 17;
+        if (e.stereotype && e.stereotype !== 'class') { g.appendChild(txt(cx, ty - 2, '«' + e.stereotype + '»', { anchor: 'middle', size: 11, fill: P.muted })); ty += 15; }
+        g.appendChild(txt(cx, ty, e.name, { anchor: 'middle', size: 13.5, weight: '600', italic: !!e.abstract }));
+        g.appendChild(line(b.x, b.y + head, b.x + b.w, b.y + head));
+        at.forEach((a, i) => g.appendChild(txt(b.x + 9, b.y + head + 15 + i * 16, Geo.attrText(a), { size: 12 })));
+        g.appendChild(line(b.x, b.y + head + aH, b.x + b.w, b.y + head + aH));
+        me.forEach((m, i) => g.appendChild(txt(b.x + 9, b.y + head + aH + 15 + i * 16, Geo.methText(m), { size: 12 })));
+        break;
+      }
+      case 'object': {
+        const sl = e.slots || [];
+        g.appendChild(box({ rx: 2 }));
+        Render.title(g, cx, b.y + 19, Geo.objTitle(e), 13, true);
+        g.appendChild(line(b.x, b.y + 28, b.x + b.w, b.y + 28));
+        sl.forEach((s, i) => g.appendChild(txt(b.x + 9, b.y + 43 + i * 16, Geo.slotText(s), { size: 12 })));
+        break;
+      }
+      case 'role': {
+        g.appendChild(box({ rx: 2 }));
+        Render.title(g, cx, b.y + b.h / 2 + 4.5, Geo.objTitle(e), 13, true);
+        break;
+      }
+      case 'initial': {
+        g.appendChild(el('circle', { cx: cx, cy: b.y + b.h / 2, r: b.w / 2, fill: P.ink }));
+        break;
+      }
+      case 'final': {
+        g.appendChild(el('circle', { cx: cx, cy: b.y + b.h / 2, r: b.w / 2, fill: P.fill, stroke: P.ink, 'stroke-width': 1.5 }));
+        g.appendChild(el('circle', { cx: cx, cy: b.y + b.h / 2, r: b.w / 2 - 5, fill: P.ink }));
+        break;
+      }
+      case 'state': {
+        g.appendChild(box({ rx: 13, ry: 13 }));
+        if (e.doActivity) {
+          g.appendChild(txt(cx, b.y + 20, e.name, { anchor: 'middle', size: 13, weight: '600' }));
+          g.appendChild(line(b.x, b.y + 28, b.x + b.w, b.y + 28));
+          g.appendChild(txt(b.x + 10, b.y + 43, 'do / ' + e.doActivity, { size: 11.5, fill: P.muted }));
+        } else {
+          g.appendChild(txt(cx, b.y + b.h / 2 + 4.5, e.name, { anchor: 'middle', size: 13, weight: '600' }));
+        }
+        break;
+      }
+      case 'participant': {
+        if (e.variant === 'actor') { Render.actorFigure(g, b, e.name, .85); }
+        else {
+          g.appendChild(box({ rx: 2 }));
+          Render.title(g, cx, b.y + b.h / 2 + 4.5, Geo.objTitle(e), 13, true);
+        }
+        break;
+      }
+      case 'activation': {
+        g.appendChild(el('rect', { x: b.x, y: b.y, width: b.w, height: b.h, fill: P.fill, stroke: P.ink, 'stroke-width': 1.3 }));
+        break;
+      }
+      case 'fragment': {
+        g.appendChild(el('rect', { x: b.x, y: b.y, width: b.w, height: b.h, fill: 'none', stroke: P.ink, 'stroke-width': 1.3 }));
+        const w = Math.max(48, measure(e.op, 12) + 26);
+        g.appendChild(path('M' + b.x + ' ' + b.y + ' H' + (b.x + w) + ' V' + (b.y + 12) + ' L' + (b.x + w - 11) + ' ' + (b.y + 23) + ' H' + b.x + ' Z', { fill: P.soft, stroke: P.ink, 'stroke-width': 1.3 }));
+        g.appendChild(txt(b.x + 9, b.y + 16, e.op || 'alt', { size: 12, weight: '700' }));
+        if (e.guard) g.appendChild(Render.tag(b.x + w + 12, b.y + 18, e.guard, { fill: P.muted }));
+        if (e.op === 'alt') {
+          /* alt tiene dos regiones separadas por una línea discontinua. */
+          const sy = Math.round(b.y + b.h * (e.split || .5));
+          g.appendChild(line(b.x, sy, b.x + b.w, sy, { 'stroke-dasharray': '7 5', 'stroke-width': 1.2 }));
+          g.appendChild(Render.tag(b.x + 10, sy + 15, e.guard2 || '[si no]', { fill: P.muted }));
+        }
+        break;
+      }
+      case 'node': {
+        const dp = 15, fx = b.x, fy = b.y + dp, fw = b.w - dp, fh = b.h - dp;
+        g.appendChild(path('M' + fx + ' ' + fy + ' L' + (fx + dp) + ' ' + b.y + ' H' + (b.x + b.w) + ' L' + (fx + fw) + ' ' + fy + ' Z', { fill: P.soft, stroke: P.ink, 'stroke-width': 1.4 }));
+        g.appendChild(path('M' + (fx + fw) + ' ' + fy + ' L' + (b.x + b.w) + ' ' + b.y + ' V' + (b.y + b.h - dp) + ' L' + (fx + fw) + ' ' + (b.y + b.h) + ' Z', { fill: P.soft, stroke: P.ink, 'stroke-width': 1.4 }));
+        g.appendChild(el('rect', { x: fx, y: fy, width: fw, height: fh, fill: P.fill, stroke: P.ink, 'stroke-width': 1.5 }));
+        const tcx = fx + fw / 2;
+        if (e.stereotype) g.appendChild(txt(tcx, fy + 18, '«' + e.stereotype + '»', { anchor: 'middle', size: 11, fill: P.muted }));
+        g.appendChild(txt(tcx, fy + (e.stereotype ? 35 : 24), e.name, { anchor: 'middle', size: 13, weight: '600' }));
+        break;
+      }
+      case 'artifact': {
+        g.appendChild(box({ rx: 2 }));
+        g.appendChild(txt(b.x + 12, b.y + 21, '«' + (e.stereotype || 'artifact') + '»', { size: 11, fill: P.muted }));
+        g.appendChild(txt(b.x + 12, b.y + 38, e.name, { size: 12.5, weight: '600' }));
+        const ix = b.x + b.w - 22, iy = b.y + 9;
+        g.appendChild(path('M' + ix + ' ' + iy + ' h8 l5 5 v10 h-13 Z M' + (ix + 8) + ' ' + iy + ' v5 h5', { fill: 'none', stroke: P.muted, 'stroke-width': 1.2 }));
+        break;
+      }
+      default: {
+        g.appendChild(box({ rx: 2 }));
+        g.appendChild(txt(cx, b.y + b.h / 2 + 4, e.name, { anchor: 'middle', size: 12 }));
+      }
+    }
+    return g;
+  },
+
+  actorFigure(g, b, name, k) {
+    const cx = b.x + b.w / 2, top = b.y + 5, r = 10 * k, hy = top + r;
+    g.appendChild(el('circle', { cx: cx, cy: hy, r: r, fill: P.fill, stroke: P.ink, 'stroke-width': 1.6 }));
+    const bodyTop = hy + r, bodyBot = bodyTop + 28 * k, arms = bodyTop + 9 * k, legY = bodyBot + 22 * k, aw = 16 * k, lw = 13 * k;
+    g.appendChild(path('M' + cx + ' ' + bodyTop + ' V' + bodyBot + ' M' + (cx - aw) + ' ' + arms + ' H' + (cx + aw) +
+      ' M' + cx + ' ' + bodyBot + ' L' + (cx - lw) + ' ' + legY + ' M' + cx + ' ' + bodyBot + ' L' + (cx + lw) + ' ' + legY,
+      { 'stroke-width': 1.6, 'stroke-linecap': 'round' }));
+    g.appendChild(txt(cx, b.y + b.h - 3, name, { anchor: 'middle', size: 12, weight: '600' }));
+  },
+
+  lifeline(d, p) {
+    const x = Geo.lifelineX(d, p), y1 = Geo.lifelineTop(d, p), y2 = Geo.lifelineBottom(d);
+    return el('g', { 'data-life': p.id }, [line(x, y1, x, y2, { 'stroke-dasharray': '7 5', stroke: P.muted, 'stroke-width': 1.2 })]);
+  },
+
+  actOff(d, p, y) {
+    const hit = (d.elements || []).some(a => a.type === 'activation' && a.owner === p.id && y >= a.y - 2 && y <= a.y + (a.h || 80) + 2);
+    return hit ? 6 : 0;
+  },
+
+  /* ---------------- geometría de relaciones ---------------- */
+  relGeom(d, r) {
+    const A = byId(d, r.from), B = byId(d, r.to);
+    if (!A || !B) return null;
+    if (d.type === 'sequence') {
+      const y = r.y || 150, xa = Geo.lifelineX(d, A), xb = Geo.lifelineX(d, B);
+      if (A.id === B.id) return { kind: 'selfseq', p1: { x: xa + Render.actOff(d, A, y), y: y }, p2: { x: xa + 8, y: y + 34 }, mid: { x: xa + 60, y: y + 14 } };
+      const dir = xb > xa ? 1 : -1;
+      const p1 = { x: xa + dir * Render.actOff(d, A, y), y: y }, p2 = { x: xb - dir * Render.actOff(d, B, y), y: y };
+      return { kind: 'seq', p1: p1, p2: p2, mid: { x: (p1.x + p2.x) / 2, y: y } };
+    }
+    if (A.id === B.id) {
+      const b = Geo.bounds(d, A);
+      return { kind: 'self', p1: { x: b.x + b.w * .72, y: b.y }, p2: { x: b.x + b.w * .28, y: b.y }, mid: { x: b.x + b.w / 2, y: b.y - 52 } };
+    }
+    const pts = Geo.route(d, r);          // la separación de paralelas ya va en Geo.route
+    if (!pts) return null;
+    const n = pts.length;
+    const m = Geo.polyMid(pts);
+    return {
+      kind: 'poly', pts: pts, p1: pts[0], p2: pts[n - 1], mid: { x: m.x, y: m.y }, ang: m.ang,
+      a1: Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x),
+      a2: Math.atan2(pts[n - 2].y - pts[n - 1].y, pts[n - 2].x - pts[n - 1].x)
+    };
+  },
+
+  deco(kind, tip, away) {
+    const out = { nodes: [], trim: 0 };
+    if (!kind) return out;
+    const p = (a, dist, perp) => ptAt(tip, a, dist, perp);
+    if (kind === 'arrowOpen') {
+      const a = p(away + .40, 13), b = p(away - .40, 13);
+      out.nodes.push(path('M' + a.x + ' ' + a.y + ' L' + tip.x + ' ' + tip.y + ' L' + b.x + ' ' + b.y, { 'stroke-width': 1.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    } else if (kind === 'arrowFilled') {
+      const a = p(away + .30, 13), b = p(away - .30, 13);
+      out.nodes.push(path('M' + tip.x + ' ' + tip.y + ' L' + a.x + ' ' + a.y + ' L' + b.x + ' ' + b.y + ' Z', { fill: P.ink, 'stroke-width': 1 }));
+      out.trim = 11;
+    } else if (kind === 'triangle') {
+      const a = p(away, 14, 8), b = p(away, 14, -8);
+      out.nodes.push(path('M' + tip.x + ' ' + tip.y + ' L' + a.x + ' ' + a.y + ' L' + b.x + ' ' + b.y + ' Z', { fill: P.fill, 'stroke-width': 1.5, 'stroke-linejoin': 'round' }));
+      out.trim = 14;
+    } else if (kind === 'diamondOpen' || kind === 'diamondFilled') {
+      const m1 = p(away, 9, 6), m2 = p(away, 9, -6), far = p(away, 18, 0);
+      out.nodes.push(path('M' + tip.x + ' ' + tip.y + ' L' + m1.x + ' ' + m1.y + ' L' + far.x + ' ' + far.y + ' L' + m2.x + ' ' + m2.y + ' Z',
+        { fill: kind === 'diamondFilled' ? P.ink : P.fill, 'stroke-width': 1.5, 'stroke-linejoin': 'round' }));
+      out.trim = 18;
+    }
+    return out;
+  },
+
+  /* ---------------- relaciones ---------------- */
+  relation(d, r, ctx) {
+    const gm = Render.relGeom(d, r);
+    if (!gm) return null;
+    const def = RDEF[r.type] || {};
+    const g = el('g', { 'data-rid': r.id });
+    const sel = ctx && ctx.selected && ctx.selected.indexOf(r.id) >= 0;
+    const col = sel ? P.sel : P.ink;
+    const dash = def.dash ? '7 5' : null;
+    const lw = sel ? 2.2 : 1.4;
+
+    if (d.type === 'sequence') { Render.seqMessage(d, r, gm, g, col, ctx); return g; }
+
+    if (gm.kind === 'self') {
+      const c1 = { x: gm.p1.x + 36, y: gm.p1.y - 62 }, c2 = { x: gm.p2.x - 36, y: gm.p2.y - 62 };
+      const away = Math.atan2(c2.y - gm.p2.y, c2.x - gm.p2.x);
+      g.appendChild(path('M' + gm.p1.x + ' ' + gm.p1.y + ' C' + c1.x + ' ' + c1.y + ' ' + c2.x + ' ' + c2.y + ' ' + gm.p2.x + ' ' + gm.p2.y,
+        { stroke: col, 'stroke-width': lw, 'stroke-dasharray': dash }));
+      Render.deco(def.end, gm.p2, away).nodes.forEach(n => { n.setAttribute('stroke', col); g.appendChild(n); });
+      const lbl = Render.relLabel(r, def);
+      if (lbl) Render.putLabel(d, r, g, lbl, { x: gm.mid.x, y: gm.mid.y }, 0, col, []);
+      return g;
+    }
+
+    /* Decoraciones en los extremos y recorte de la polilínea. */
+    const pts = gm.pts.map(p => ({ x: p.x, y: p.y }));
+    const startKind = def.start || (r.sourceNavigable && def.mult ? 'arrowOpen' : null);
+    const endKind = def.end || ((r.targetNavigable || (def.mult && r.targetNavigable)) ? 'arrowOpen' : null);
+    const ds = Render.deco(startKind, pts[0], gm.a1);
+    const de = Render.deco(endKind, pts[pts.length - 1], gm.a2);
+    pts[0] = ptAt(pts[0], gm.a1, ds.trim);
+    pts[pts.length - 1] = ptAt(pts[pts.length - 1], gm.a2, de.trim);
+    g.appendChild(path('M' + pts.map(p => p.x + ' ' + p.y).join(' L'), { stroke: col, 'stroke-width': lw, 'stroke-dasharray': dash, 'stroke-linejoin': 'round' }));
+    ds.nodes.concat(de.nodes).forEach(n => { n.setAttribute('stroke', col); g.appendChild(n); });
+
+    if (r.type === 'connector' && (r.messages || []).length) {
+      /* Los mensajes se apilan al costado del conector, fuera de los roles. */
+      const A3 = byId(d, r.from), B3 = byId(d, r.to);
+      const ang = gm.ang;
+      const nx3 = Math.abs(Math.sin(ang)), ny3 = Math.abs(Math.cos(ang));
+      const ext3 = (e) => { const b = Geo.bounds(d, e); return nx3 * b.w / 2 + ny3 * b.h / 2; };
+      const off3 = Math.max(14, Math.max(ext3(A3), ext3(B3)) - 8);
+      (r.messages || []).forEach((m, i) => {
+        const a = m.dir === 'ba' ? ang + Math.PI : ang;
+        const base = ptAt(gm.mid, ang, 0, -(off3 + i * 26));
+        const s = ptAt(base, a, -10), t = ptAt(base, a, 10);
+        g.appendChild(line(s.x, s.y, t.x, t.y, { stroke: col, 'stroke-width': 1.4 }));
+        Render.deco('arrowFilled', t, a + Math.PI).nodes.forEach(n => { n.setAttribute('stroke', col); n.setAttribute('fill', col); g.appendChild(n); });
+        g.appendChild(Render.tag(base.x, base.y - 10, (m.n || (i + 1)) + ': ' + (m.text || 'mensaje()'), { anchor: 'middle', fill: col }));
+      });
+    } else {
+      const lbl = Render.relLabel(r, def);
+      if (lbl) Render.putLabel(d, r, g, lbl, gm.mid, gm.ang, col, [r.from, r.to]);
+    }
+
+    if (def.mult) {
+      /* Multiplicidad y rol, cada uno junto a SU extremo: la multiplicidad
+         pegada al elemento y el rol un poco más adelante, del lado contrario.
+         Si el sitio está ocupado por otra etiqueta, se corre por la línea. */
+      const put = (p, a, text, perp, dist) => {
+        if (!text) return;
+        const w = measure(text, 11.5) + 9;
+        let q = ptAt(p, a, dist, perp);
+        for (let i = 1; i <= 3 && Render.busyAt(d, q, w, [r.from, r.to]); i++) q = ptAt(p, a, dist + i * 17, perp);
+        g.appendChild(Render.tag(q.x, q.y, text, { anchor: 'middle', fill: col }));
+      };
+      put(gm.p1, gm.a1, r.sourceMultiplicity, -11, 19);
+      put(gm.p2, gm.a2, r.targetMultiplicity, 11, 19);
+      put(gm.p1, gm.a1, r.sourceRole, 13, 45);
+      put(gm.p2, gm.a2, r.targetRole, -13, 45);
+    }
+    return g;
+  },
+
+  /* Coloca la etiqueta principal: respeta labelPosition si el usuario la movió,
+     y si no busca un lugar que no tape elementos ni otras etiquetas. */
+  putLabel(d, r, g, lbl, mid, ang, col, skip) {
+    const lw = measure(lbl, 11.5) + 9;
+    let lp;
+    if (r.labelPosition) {
+      lp = { x: mid.x + r.labelPosition.dx, y: mid.y + r.labelPosition.dy };
+    } else {
+      const A2 = byId(d, r.from), B2 = byId(d, r.to);
+      const gap = A2 && B2 ? Math.hypot(Geo.center(Geo.bounds(d, B2)).x - Geo.center(Geo.bounds(d, A2)).x,
+        Geo.center(Geo.bounds(d, B2)).y - Geo.center(Geo.bounds(d, A2)).y) : 999;
+      lp = { x: mid.x, y: mid.y - 7 };
+      /* Hueco real entre las dos cajas medido en la dirección de la línea. */
+      const ux = Math.abs(Math.cos(ang)), uy = Math.abs(Math.sin(ang));
+      const along = (e) => { const b = Geo.bounds(d, e); return ux * b.w / 2 + uy * b.h / 2; };
+      const dist = A2 && B2 ? gap - along(A2) - along(B2) : 999;
+      if (A2 && B2 && lw + 12 > Math.max(20, dist)) {
+        const nx = Math.abs(Math.sin(ang)), ny = Math.abs(Math.cos(ang));
+        const ext = (e) => { const b = Geo.bounds(d, e); return nx * b.w / 2 + ny * b.h / 2; };
+        /* Se aparta lo justo: nunca tanto como para despegarse de la línea. */
+        const off = Math.min(Math.max(ext(A2), ext(B2)) + 16, 90);
+        const u = ptAt(mid, ang, 0, -off), v = ptAt(mid, ang, 0, off);
+        lp = !Render.busyAt(d, u, lw, []) ? u : (!Render.busyAt(d, v, lw, []) ? v : lp);
+      } else {
+        lp = Render.freeSpot(d, lp, ang, skip, lw);
+      }
+    }
+    Render._labels[r.id] = { x: lp.x - lw / 2, y: lp.y - 11, w: lw, h: 16, ax: mid.x, ay: mid.y };
+    g.appendChild(Render.tag(lp.x, lp.y, lbl, { anchor: 'middle', fill: col }));
+  },
+
+  relLabel(r, def) {
+    if (r.type === 'transition') {
+      let s = r.event || '';
+      if (r.guard) s += ' [' + r.guard + ']';
+      if (r.action) s += ' / ' + r.action;
+      return s || r.label || '';
+    }
+    if (def.stereo) return '«' + def.stereo + '»' + (r.label ? ' ' + r.label : '');
+    return r.label || '';
+  },
+
+  seqMessage(d, r, gm, g, col, ctx) {
+    const def = RDEF[r.type] || {};
+    const dash = def.dash ? '7 5' : null;
+    const num = (ctx && ctx.numbers && ctx.numbers[r.id]) ? ctx.numbers[r.id] + ': ' : '';
+    const label = num + (r.label || (r.type === 'return' ? 'retorno' : 'mensaje()'));
+    if (gm.kind === 'selfseq') {
+      const x = gm.p1.x, y = gm.p1.y;
+      g.appendChild(path('M' + x + ' ' + y + ' H' + (x + 46) + ' V' + (y + 34) + ' H' + (x + 6),
+        { stroke: col, 'stroke-width': 1.5, 'stroke-dasharray': dash }));
+      Render.deco(def.end, { x: x + 6, y: y + 34 }, 0).nodes.forEach(n => { n.setAttribute('stroke', col); if (def.end === 'arrowFilled') n.setAttribute('fill', col); g.appendChild(n); });
+      g.appendChild(Render.tag(x + 54, y + 4, label, { fill: col }));
+      return;
+    }
+    const p1 = gm.p1, p2 = gm.p2;
+    const ang = p2.x > p1.x ? 0 : Math.PI;
+    const de = Render.deco(def.end, p2, ang + Math.PI);
+    const q2 = ptAt(p2, ang + Math.PI, de.trim);
+    g.appendChild(line(p1.x, p1.y, q2.x, q2.y, { stroke: col, 'stroke-width': 1.6, 'stroke-dasharray': dash }));
+    de.nodes.forEach(n => { n.setAttribute('stroke', col); if (def.end === 'arrowFilled') n.setAttribute('fill', col); g.appendChild(n); });
+    g.appendChild(Render.tag((p1.x + p2.x) / 2, p1.y - 8, label, { anchor: 'middle', fill: col }));
+  },
+
+  /* Numeración automática de los mensajes de un diagrama de secuencia. */
+  numbers(d) {
+    const map = {};
+    if (d.type !== 'sequence' || !(d.options && d.options.numbered)) return map;
+    /* Mismo criterio que Doc.renumber: manda la posición vertical y, si dos
+       mensajes coinciden, el número que ya tenían. Nunca el orden del arreglo. */
+    (d.relations || []).slice()
+      .sort((a, b) => (a.y || 0) - (b.y || 0) || (a.seq || 0) - (b.seq || 0))
+      .forEach((r, i) => { map[r.id] = i + 1; });
+    return map;
+  },
+
+  /* Escena completa: capas de fondo, relaciones y elementos. */
+  scene(d, ctx) {
+    ctx = ctx || {};
+    ctx.numbers = Render.numbers(d);
+    Render._tags = []; Render._labels = {};
+    Render._ext = { x1: 1e9, y1: 1e9, x2: -1e9, y2: -1e9 };
+    const back = [], rels = [], els = [];
+    if (d.type === 'sequence') {
+      /* Orden del fondo: líneas de vida, activaciones y por último los fragmentos,
+         para que el rótulo del fragmento quede siempre legible. */
+      (d.elements || []).forEach(e => { if (e.type === 'participant') back.push(Render.lifeline(d, e)); });
+      (d.elements || []).forEach(e => { if (e.type === 'activation') back.push(Render.element(d, e)); });
+      (d.elements || []).forEach(e => { if (CONTAINERS.indexOf(e.type) >= 0) back.push(Render.element(d, e)); });
+    } else {
+      (d.elements || []).forEach(e => { if (CONTAINERS.indexOf(e.type) >= 0) back.push(Render.element(d, e)); });
+    }
+    (d.relations || []).forEach(r => { const n = Render.relation(d, r, ctx); if (n) rels.push(n); });
+    (d.elements || []).forEach(e => {
+      if (CONTAINERS.indexOf(e.type) >= 0) return;
+      if (d.type === 'sequence' && e.type === 'activation') return;
+      els.push(Render.element(d, e));
+    });
+    return { back: back, rels: rels, els: els, labels: Render._ext };
+  }
+};
+/* =========================================================================
+   4. Lienzo: transformación, detección de clics, arrastre, zoom y selección
+   ========================================================================= */
+
+class CanvasManager {
+  constructor(app) {
+    this.app = app;
+    this.svg = document.getElementById('canvas');
+    this.stage = document.getElementById('stage');
+    this.tx = 60; this.ty = 40; this.k = 1;
+    this.grid = true; this.snapOn = true;
+    this.pending = null;      // conexión en curso
+    this.drag = null;
+    this.space = false;
+    this._raf = 0;
+    this.build();
+    this.bind();
+  }
+
+  build() {
+    const svg = this.svg;
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const defs = el('defs', null, [
+      el('pattern', { id: 'muGrid', width: 20, height: 20, patternUnits: 'userSpaceOnUse' },
+        [path('M20 0H0V20', { stroke: P.grid, 'stroke-width': 1 })]),
+      el('pattern', { id: 'muGrid100', width: 100, height: 100, patternUnits: 'userSpaceOnUse' },
+        [el('rect', { width: 100, height: 100, fill: 'url(#muGrid)' }), path('M100 0H0V100', { stroke: '#d3dbe6', 'stroke-width': 1 })])
+    ]);
+    svg.appendChild(defs);
+    this.vp = el('g', { id: 'vp' });
+    this.gGrid = el('rect', { x: -4000, y: -4000, width: 16000, height: 12000, fill: 'url(#muGrid100)' });
+    this.gBack = el('g'); this.gRel = el('g'); this.gEl = el('g'); this.gSel = el('g'); this.gTmp = el('g');
+    [this.gGrid, this.gBack, this.gRel, this.gEl, this.gSel, this.gTmp].forEach(n => this.vp.appendChild(n));
+    svg.appendChild(this.vp);
+    this.applyView();
+  }
+
+  applyView() {
+    this.vp.setAttribute('transform', 'translate(' + this.tx + ',' + this.ty + ') scale(' + this.k + ')');
+    this.gGrid.setAttribute('visibility', this.grid ? 'visible' : 'hidden');
+    const z = document.getElementById('zoomVal'); if (z) z.textContent = Math.round(this.k * 100) + '%';
+  }
+
+  rect() { return this.stage.getBoundingClientRect(); }
+  toWorldXY(cx, cy) { const r = this.rect(); return { x: (cx - r.left - this.tx) / this.k, y: (cy - r.top - this.ty) / this.k }; }
+  toWorld(ev) { return this.toWorldXY(ev.clientX, ev.clientY); }
+  toScreen(p) { const r = this.rect(); return { x: p.x * this.k + this.tx, y: p.y * this.k + this.ty, left: r.left, top: r.top }; }
+  snap(v) { return this.snapOn ? Math.round(v / 10) * 10 : Math.round(v); }
+
+  /* ---------------- render ---------------- */
+  requestRender() {
+    if (this._raf) return;
+    this._raf = requestAnimationFrame(() => { this._raf = 0; this.render(); });
+  }
+  render() {
+    const d = this.app.diagram();
+    [this.gBack, this.gRel, this.gEl, this.gSel].forEach(g => { while (g.firstChild) g.removeChild(g.firstChild); });
+    if (!d) return;
+    const sc = Render.scene(d, { selected: this.app.sel });
+    sc.back.forEach(n => this.gBack.appendChild(n));
+    sc.rels.forEach(n => this.gRel.appendChild(n));
+    sc.els.forEach(n => this.gEl.appendChild(n));
+    this.drawSelection(d);
+    this.app.updateStatus();
+  }
+  drawSelection(d) {
+    const single = this.app.sel.length === 1;
+    this.app.sel.forEach(id => {
+      const e = byId(d, id);
+      if (!e) return;
+      const b = Geo.bounds(d, e), m = 4;
+      this.gSel.appendChild(el('rect', {
+        x: b.x - m, y: b.y - m, width: b.w + m * 2, height: b.h + m * 2, fill: 'none',
+        stroke: P.sel, 'stroke-width': 1.4, 'stroke-dasharray': '5 4', rx: 3
+      }));
+      const corners = [[b.x, b.y], [b.x + b.w, b.y], [b.x, b.y + b.h], [b.x + b.w, b.y + b.h]];
+      corners.forEach(c => this.gSel.appendChild(el('rect', { x: c[0] - 3, y: c[1] - 3, width: 6, height: 6, fill: P.sel })));
+      if (single && RESIZABLE.indexOf(e.type) >= 0) {
+        this.gSel.appendChild(el('rect', { x: b.x + b.w - 1, y: b.y + b.h - 1, width: 11, height: 11, fill: P.fill, stroke: P.sel, 'stroke-width': 1.6, rx: 2 }));
+      }
+    });
+    /* Tiradores de los puntos intermedios de la relación seleccionada. */
+    if (this.app.sel.length === 1) {
+      const r = this.app.relById(this.app.sel[0]);
+      if (r && d.type !== 'sequence') {
+        (r.points || []).forEach(q => {
+          this.gSel.appendChild(el('rect', { x: q.x - 4.5, y: q.y - 4.5, width: 9, height: 9, fill: P.fill, stroke: P.sel, 'stroke-width': 1.8, rx: 1.5 }));
+        });
+        const L = Render._labels[r.id];
+        if (L) this.gSel.appendChild(el('rect', { x: L.x - 2, y: L.y - 2, width: L.w + 4, height: L.h + 4, fill: 'none', stroke: P.sel, 'stroke-width': 1, 'stroke-dasharray': '3 3', rx: 2 }));
+      }
+    }
+    if (this.pending) {
+      const b = Geo.bounds(d, this.pending.el), c = Geo.center(b);
+      this.gSel.appendChild(el('rect', { x: b.x - 4, y: b.y - 4, width: b.w + 8, height: b.h + 8, fill: 'none', stroke: P.sel, 'stroke-width': 2, rx: 3 }));
+      if (this.pending.to) this.gSel.appendChild(line(c.x, c.y, this.pending.to.x, this.pending.to.y, { stroke: P.sel, 'stroke-width': 1.6, 'stroke-dasharray': '6 4' }));
+    }
+    if (this.band) {
+      const b = this.band;
+      this.gSel.appendChild(el('rect', {
+        x: Math.min(b.x1, b.x2), y: Math.min(b.y1, b.y2), width: Math.abs(b.x2 - b.x1), height: Math.abs(b.y2 - b.y1),
+        fill: P.selSoft, stroke: P.sel, 'stroke-width': 1, 'stroke-dasharray': '4 3'
+      }));
+    }
+  }
+
+  /* ---------------- detección ---------------- */
+  hitElement(d, e, p) {
+    const b = Geo.bounds(d, e);
+    if (e.type === 'usecase') return Geo.inEllipse(b, p);
+    if (e.type === 'initial' || e.type === 'final') return Geo.inEllipse(b, p);
+    return Geo.inside({ x: b.x - 2, y: b.y - 2, w: b.w + 4, h: b.h + 4 }, p);
+  }
+  hitContainer(d, e, p) {
+    const b = Geo.bounds(d, e);
+    if (!Geo.inside(b, p)) return false;
+    const band = 12, titleH = e.type === 'node' ? 58 : (e.type === 'fragment' ? 24 : 34);
+    return p.x < b.x + band || p.x > b.x + b.w - band || p.y > b.y + b.h - band || p.y < b.y + titleH;
+  }
+  hitRelation(d, r, p) {
+    const g = Render.relGeom(d, r);
+    if (!g) return false;
+    const tol = 8 / Math.max(.6, this.k);
+    if (g.kind === 'self' || g.kind === 'selfseq') return Math.hypot(p.x - g.mid.x, p.y - g.mid.y) < 26;
+    if (g.kind === 'poly') {
+      for (let i = 1; i < g.pts.length; i++) if (Geo.distToSeg(p, g.pts[i - 1], g.pts[i]) < tol) return true;
+      return false;
+    }
+    return Geo.distToSeg(p, g.p1, g.p2) < tol;
+  }
+  /* Waypoint bajo el puntero (solo con la relación seleccionada). */
+  hitWaypoint(d, p) {
+    if (this.app.sel.length !== 1) return null;
+    const r = this.app.relById(this.app.sel[0]);
+    if (!r || !(r.points || []).length) return null;
+    const s = 9 / this.k;
+    for (let i = 0; i < r.points.length; i++) {
+      const q = r.points[i];
+      if (Math.abs(p.x - q.x) < s && Math.abs(p.y - q.y) < s) return { r: r, i: i };
+    }
+    return null;
+  }
+  /* Etiqueta de relación bajo el puntero (para moverla). */
+  hitLabel(d, p) {
+    const rels = d.relations || [];
+    for (let i = rels.length - 1; i >= 0; i--) {
+      const L = Render._labels[rels[i].id];
+      if (!L) continue;
+      if (p.x > L.x - 2 && p.x < L.x + L.w + 2 && p.y > L.y - 2 && p.y < L.y + L.h + 2) return { r: rels[i], L: L };
+    }
+    return null;
+  }
+  hitHandle(d, p) {
+    if (this.app.sel.length !== 1) return null;
+    const e = byId(d, this.app.sel[0]);
+    if (!e || RESIZABLE.indexOf(e.type) < 0) return null;
+    const b = Geo.bounds(d, e), s = 12 / this.k;
+    if (p.x > b.x + b.w - s && p.x < b.x + b.w + s && p.y > b.y + b.h - s && p.y < b.y + b.h + s) return e;
+    return null;
+  }
+  hit(p) {
+    const d = this.app.diagram(); if (!d) return null;
+    const els = d.elements || [];
+    for (let i = els.length - 1; i >= 0; i--) {
+      const e = els[i];
+      if (CONTAINERS.indexOf(e.type) >= 0) continue;
+      if (this.hitElement(d, e, p)) return { kind: 'element', e: e };
+    }
+    for (let i = (d.relations || []).length - 1; i >= 0; i--) {
+      if (this.hitRelation(d, d.relations[i], p)) return { kind: 'relation', r: d.relations[i] };
+    }
+    /* Entre contenedores superpuestos gana el más pequeño (el más interno). */
+    let best = null, area = Infinity;
+    for (let i = els.length - 1; i >= 0; i--) {
+      const e = els[i];
+      if (CONTAINERS.indexOf(e.type) < 0) continue;
+      if (!this.hitContainer(d, e, p)) continue;
+      const b = Geo.bounds(d, e), a = b.w * b.h;
+      if (a < area) { area = a; best = e; }
+    }
+    return best ? { kind: 'element', e: best } : null;
+  }
+
+  /* ---------------- eventos ---------------- */
+  bind() {
+    const svg = this.svg;
+    svg.addEventListener('pointerdown', e => this.onDown(e));
+    svg.addEventListener('pointermove', e => this.onMove(e));
+    window.addEventListener('pointerup', e => this.onUp(e));
+    svg.addEventListener('dblclick', e => this.onDbl(e));
+    svg.addEventListener('contextmenu', e => this.onCtx(e));
+    svg.addEventListener('wheel', e => this.onWheel(e), { passive: false });
+    document.addEventListener('keydown', e => {
+      const t = ((e.target && e.target.tagName) || '').toLowerCase();
+      if (t === 'input' || t === 'textarea' || t === 'select') return;     // se está escribiendo
+      if (e.code === 'Space' && !this.app.editing()) { this.space = true; svg.classList.add('panning'); }
+    });
+    document.addEventListener('keyup', e => { if (e.code === 'Space') { this.space = false; svg.classList.remove('panning'); } });
+  }
+
+  onDown(ev) {
+    if (ev.button === 2) return;
+    this.app.hideMenus();
+    this.app.commitInline();
+    const p = this.toWorld(ev);
+    const d = this.app.diagram();
+    try { this.svg.setPointerCapture(ev.pointerId); } catch (e) { }
+
+    if (ev.button === 1 || this.space || ev.altKey) {
+      this.drag = { kind: 'pan', sx: ev.clientX, sy: ev.clientY, tx: this.tx, ty: this.ty };
+      this.svg.classList.add('panning');
+      return;
+    }
+    const tool = this.app.tool;
+    if (tool.kind === 'element') { this.app.addElementAt(tool.type, p, tool.variant); return; }
+    if (tool.kind === 'relation') { this.onRelationClick(p); return; }
+
+    const add = ev.shiftKey || ev.ctrlKey || ev.metaKey;     // multiselección
+    const wp = this.hitWaypoint(d, p);
+    if (wp) {
+      this.drag = { kind: 'wp', r: wp.r, i: wp.i, sp: p, x0: wp.r.points[wp.i].x, y0: wp.r.points[wp.i].y };
+      return;
+    }
+    const handle = this.hitHandle(d, p);
+    if (handle) {
+      const b = Geo.bounds(d, handle);
+      this.drag = { kind: 'resize', e: handle, sp: p, w: b.w, h: b.h };
+      return;
+    }
+    const lb = this.hitLabel(d, p);
+    if (lb && d.type !== 'sequence') {
+      if (this.app.sel.indexOf(lb.r.id) < 0) this.app.select([lb.r.id]);
+      /* Si todavía no tiene posición propia, se parte de donde está dibujada
+         ahora (que puede estar corrida para no tapar nada). */
+      let cur = lb.r.labelPosition;
+      if (!cur) {
+        const gm = Render.relGeom(d, lb.r);
+        cur = gm ? { dx: lb.L.x + lb.L.w / 2 - gm.mid.x, dy: lb.L.y + 10.5 - gm.mid.y } : { dx: 0, dy: 0 };
+      }
+      this.drag = { kind: 'label', r: lb.r, sp: p, dx0: cur.dx, dy0: cur.dy };
+      return;
+    }
+    const h = this.hit(p);
+    if (!h) {
+      if (!add) this.app.select([]);
+      this.band = { x1: p.x, y1: p.y, x2: p.x, y2: p.y };
+      this.drag = { kind: 'band' };
+      this.requestRender();
+      return;
+    }
+    if (h.kind === 'relation') {
+      if (add) this.app.toggleSel(h.r.id); else this.app.select([h.r.id]);
+      if (d.type === 'sequence') this.drag = { kind: 'msg', r: h.r, sp: p, y0: h.r.y || 150 };
+      return;
+    }
+    const e = h.e;
+    if (add) this.app.toggleSel(e.id);
+    else if (this.app.sel.indexOf(e.id) < 0) this.app.select([e.id]);
+    this.startMove(p);
+  }
+
+  startMove(p) {
+    const d = this.app.diagram();
+    const roots = this.app.sel.filter(id => byId(d, id));
+    const set = {};
+    roots.forEach(id => { set[id] = 1; });
+    /* Un contenedor arrastra a sus hijos declarados (y a los hijos de estos),
+       conservando las posiciones relativas. */
+    const msgs = [];
+    roots.forEach(id => {
+      const e = byId(d, id);
+      Geo.descendants(d, e).forEach(c => { set[c.id] = 1; });
+      /* En secuencia, el fragmento se lleva los mensajes que tiene declarados. */
+      if (d.type === 'sequence' && e.type === 'fragment') {
+        const fam = [e.id].concat(Geo.descendants(d, e).map(x => x.id));
+        (d.relations || []).forEach(r => {
+          if (fam.indexOf(r.parentId) >= 0 && !msgs.some(m => m.r === r)) msgs.push({ r: r, y0: r.y || 0 });
+        });
+      }
+    });
+    const orig = {};
+    Object.keys(set).forEach(id => { const e = byId(d, id); if (e) orig[id] = { x: e.x, y: e.y }; });
+    this.drag = { kind: 'move', sp: p, orig: orig, roots: roots, msgs: msgs, moved: false };
+  }
+
+  onMove(ev) {
+    const p = this.toWorld(ev);
+    if (this.pending) { this.pending.to = p; this.requestRender(); }
+    const dr = this.drag;
+    if (!dr) return;
+    if (dr.kind === 'pan') {
+      this.tx = dr.tx + (ev.clientX - dr.sx); this.ty = dr.ty + (ev.clientY - dr.sy);
+      this.applyView(); return;
+    }
+    const d = this.app.diagram();
+    if (dr.kind === 'band') { this.band.x2 = p.x; this.band.y2 = p.y; this.requestRender(); return; }
+    if (dr.kind === 'wp') {
+      dr.r.points[dr.i] = { x: this.snap(dr.x0 + (p.x - dr.sp.x)), y: this.snap(dr.y0 + (p.y - dr.sp.y)) };
+      dr.moved = true; this.requestRender(); return;
+    }
+    if (dr.kind === 'label') {
+      dr.r.labelPosition = { dx: Math.round(dr.dx0 + (p.x - dr.sp.x)), dy: Math.round(dr.dy0 + (p.y - dr.sp.y)) };
+      dr.moved = true; this.requestRender(); return;
+    }
+    if (dr.kind === 'msg') { dr.r.y = Math.max(60, this.snap(dr.y0 + (p.y - dr.sp.y))); dr.moved = true; this.requestRender(); return; }
+    if (dr.kind === 'resize') {
+      const e = dr.e, min = Geo.minSizeIn(d, e);            // nunca por debajo del contenido ni de los hijos
+      const nw = Math.max(min.w, this.snap(dr.w + (p.x - dr.sp.x)));
+      const nh = Math.max(min.h, this.snap(dr.h + (p.y - dr.sp.y)));
+      if (e.type !== 'activation') e.w = nw;
+      e.h = nh; dr.moved = true; this.requestRender(); return;
+    }
+    if (dr.kind === 'move') {
+      const dx = p.x - dr.sp.x, dy = p.y - dr.sp.y;
+      if (Math.abs(dx) > 1 || Math.abs(dy) > 1) dr.moved = true;
+      /* Se imanta el desplazamiento, no cada elemento por separado: así un
+         grupo conserva exactamente sus posiciones relativas. */
+      const ref = dr.orig[(dr.roots || [])[0]] || dr.orig[Object.keys(dr.orig)[0]] || { x: 0, y: 0 };
+      const sdx = this.snap(ref.x + dx) - ref.x, sdy = this.snap(ref.y + dy) - ref.y;
+      (dr.msgs || []).forEach(m => { m.r.y = Math.max(60, m.y0 + sdy); });
+      Object.keys(dr.orig).forEach(id => {
+        const e = byId(d, id); if (!e) return;
+        const o = dr.orig[id];
+        let nx = o.x + sdx, ny = o.y + sdy;
+        if (d.type === 'sequence') {
+          if (e.type === 'participant') ny = o.y;                    // los participantes viven en la cabecera
+          if (e.type === 'activation') { nx = o.x; ny = Math.max(60, ny); }
+        }
+        e.x = nx; e.y = ny;
+      });
+      this.requestRender();
+    }
+  }
+
+  onUp(ev) {
+    const dr = this.drag;
+    this.svg.classList.remove('panning');
+    if (!dr) return;
+    this.drag = null;
+    if (dr.kind === 'band') {
+      const b = this.band; this.band = null;
+      const d = this.app.diagram();
+      const r = { x: Math.min(b.x1, b.x2), y: Math.min(b.y1, b.y2), w: Math.abs(b.x2 - b.x1), h: Math.abs(b.y2 - b.y1) };
+      if (r.w > 4 && r.h > 4) {
+        const ids = (d.elements || []).filter(e => {
+          const eb = Geo.bounds(d, e);
+          return eb.x < r.x + r.w && eb.x + eb.w > r.x && eb.y < r.y + r.h && eb.y + eb.h > r.y;
+        }).map(e => e.id);
+        this.app.select(ids);
+      } else this.app.refresh();
+      return;
+    }
+    if (dr.moved) {
+      if (dr.kind === 'move') this.app.reparent(dr.roots || []);
+      if (dr.kind === 'wp') this.app.cleanWaypoints(dr.r);
+      const dd = this.app.diagram();
+      if (dr.kind === 'msg') { Doc.assignFragment(dd, dr.r); Doc.renumber(dd); }
+      if (dr.kind === 'resize' && dr.e && dr.e.type === 'fragment') Doc.assignFragments(dd);
+      if (dr.msgs && dr.msgs.length) { Doc.assignFragments(dd); Doc.renumber(dd); }
+      this.app.commit();
+    } else this.app.refresh();
+  }
+
+  onRelationClick(p) {
+    const d = this.app.diagram();
+    const h = this.hit(p);
+    if (!h || h.kind !== 'element') { this.cancelPending(); return; }
+    if (!this.pending) {
+      this.pending = { el: h.e, to: p };
+      this.app.hint('Elemento origen: ' + (h.e.name || h.e.type) + '. Ahora hacé clic en el destino. (Esc cancela)');
+      this.requestRender();
+      return;
+    }
+    const from = this.pending.el, to = h.e;
+    this.pending = null; this.app.hint('');
+    this.app.addRelation(this.app.tool.type, from, to);
+  }
+  cancelPending() { this.pending = null; this.app.hint(''); this.requestRender(); }
+
+  onDbl(ev) {
+    const p = this.toWorld(ev);
+    const d = this.app.diagram();
+    const wp = this.hitWaypoint(d, p);
+    if (wp) { this.app.removeWaypoint(wp.r, wp.i); return; }      // doble clic en un punto lo quita
+    const lb = this.hitLabel(d, p);
+    if (lb && d.type !== 'sequence') { this.app.select([lb.r.id]); this.app.startInline(lb.r); return; }
+    const h = this.hit(p);
+    if (!h) return;
+    if (h.kind === 'element') { this.app.select([h.e.id]); this.app.startInline(h.e); }
+    else { this.app.select([h.r.id]); this.app.addWaypointAt(h.r, p); }
+  }
+
+  onCtx(ev) {
+    ev.preventDefault();
+    const p = this.toWorld(ev);
+    const h = this.hit(p);
+    if (h) {
+      const id = h.kind === 'element' ? h.e.id : h.r.id;
+      if (this.app.sel.indexOf(id) < 0) this.app.select([id]);
+    } else if (!ev.shiftKey) this.app.select([]);
+    const kind = h ? (h.kind === 'relation' ? 'relation' : 'element') : 'canvas';
+    this.app.showContext(ev.clientX, ev.clientY, kind, p);
+  }
+
+  onWheel(ev) {
+    ev.preventDefault();
+    if (ev.shiftKey) { this.tx -= ev.deltaY; this.applyView(); return; }
+    const w = this.toWorld(ev);
+    const f = ev.deltaY < 0 ? 1.12 : 1 / 1.12;
+    this.zoomAt(clamp(this.k * f, .25, 3), w, ev.clientX, ev.clientY);
+  }
+  zoomAt(k, world, cx, cy) {
+    const r = this.rect();
+    this.k = k;
+    this.tx = (cx - r.left) - world.x * k;
+    this.ty = (cy - r.top) - world.y * k;
+    this.applyView();
+  }
+  zoomBy(f) {
+    const r = this.rect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    this.zoomAt(clamp(this.k * f, .25, 3), this.toWorldXY(cx, cy), cx, cy);
+  }
+  fit() {
+    const d = this.app.diagram(); if (!d) return;
+    const r = this.rect(), b = Geo.contentBox(d), pad = 40;
+    if (r.width < 80 || r.height < 80) return;                 // el lienzo aún no tiene tamaño
+    if (!(d.elements || []).length) { this.k = 1; this.tx = 60; this.ty = 40; this.applyView(); return; }
+    const k = clamp(Math.min((r.width - pad * 2) / b.w, (r.height - pad * 2) / b.h), .25, 2);
+    this.k = k;
+    this.tx = (r.width - b.w * k) / 2 - b.x * k;
+    this.ty = (r.height - b.h * k) / 2 - b.y * k;
+    this.applyView();
+  }
+  centerOn(d) { this.fit(); }
+}
+/* =========================================================================
+   5. Interfaz: herramientas, pestañas, panel de propiedades, menús y avisos
+   ========================================================================= */
+
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const UI = {
+  _res: null, _cancel: null,
+  toast(msg, kind) {
+    const host = document.getElementById('toasts');
+    const t = document.createElement('div');
+    t.className = 'toast' + (kind ? ' ' + kind : '');
+    t.textContent = msg;
+    host.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 320); }, 2600);
+  },
+  /* Cerrar siempre resuelve la promesa pendiente: si no, un Escape dejaba el
+     flujo esperando para siempre. */
+  close(val) {
+    const m = document.getElementById('modal');
+    m.classList.remove('open');
+    m.querySelector('.box').innerHTML = '';
+    const r = UI._res; const c = UI._cancel;
+    UI._res = null; UI._cancel = null;
+    if (r) r(val === undefined ? c : val);
+  },
+  open(html, cancelVal, res) {
+    const m = document.getElementById('modal'), b = m.querySelector('.box');
+    if (UI._res) UI.close();                       // nunca dos modales encimados
+    b.innerHTML = html;
+    m.classList.add('open');
+    UI._res = res; UI._cancel = cancelVal;
+    m.onclick = (ev) => { if (ev.target === m) UI.close(); };
+    return b;
+  },
+  prompt(title, label, value) {
+    return new Promise(res => {
+      const b = UI.open('<h3>' + esc(title) + '</h3><label class="f"><span>' + esc(label) + '</span>' +
+        '<input type="text" id="mdIn" value="' + esc(value || '') + '"></label>' +
+        '<div class="actions"><button class="tb" id="mdCancel">Cancelar</button><button class="tb" id="mdOk">Aceptar</button></div>', null, res);
+      const inp = b.querySelector('#mdIn');
+      setTimeout(() => { inp.focus(); inp.select(); }, 0);
+      b.querySelector('#mdOk').onclick = () => UI.close(inp.value.trim() || null);
+      b.querySelector('#mdCancel').onclick = () => UI.close(null);
+      inp.onkeydown = ev => {
+        ev.stopPropagation();                      // el atajo global no debe verlo
+        if (ev.key === 'Enter') UI.close(inp.value.trim() || null);
+        if (ev.key === 'Escape') UI.close(null);
+      };
+    });
+  },
+  confirm(title, text, okLabel) {
+    return new Promise(res => {
+      const b = UI.open('<h3>' + esc(title) + '</h3><p>' + esc(text) + '</p>' +
+        '<div class="actions"><button class="tb" id="mdCancel">Cancelar</button><button class="tb danger" id="mdOk">' + esc(okLabel || 'Aceptar') + '</button></div>', false, res);
+      setTimeout(() => { const k = b.querySelector('#mdOk'); if (k) k.focus(); }, 0);
+      b.querySelector('#mdOk').onclick = () => UI.close(true);
+      b.querySelector('#mdCancel').onclick = () => UI.close(false);
+    });
+  }
+};
+
+/* ---------- campos de formulario ---------- */
+const F = {
+  text: (label, key, val, ph) => '<label class="f"><span>' + esc(label) + '</span><input type="text" data-k="' + key + '" value="' + esc(val) + '" placeholder="' + esc(ph || '') + '"></label>',
+  mult: (label, key, val) => '<label class="f"><span>' + esc(label) + '</span><input type="text" list="mults" data-k="' + key + '" value="' + esc(val) + '" placeholder="1, 0..*, …"></label>',
+  select: (label, key, val, opts) => '<label class="f"><span>' + esc(label) + '</span><select data-k="' + key + '">' +
+    opts.map(o => { const v = Array.isArray(o) ? o[0] : o, t = Array.isArray(o) ? o[1] : (o === '' ? '(ninguno)' : o); return '<option value="' + esc(v) + '"' + (String(val || '') === String(v) ? ' selected' : '') + '>' + esc(t) + '</option>'; }).join('') +
+    '</select></label>',
+  check: (label, key, val) => '<label class="check"><input type="checkbox" data-k="' + key + '"' + (val ? ' checked' : '') + '> ' + esc(label) + '</label>',
+  /* Subir / bajar / quitar para las filas de listas editables. */
+  rowBtns: (list, i, n) => '<span class="rowbtns">' +
+    '<button class="mini" data-move="' + list + ':' + i + ':-1"' + (i === 0 ? ' disabled' : '') + ' title="Subir">↑</button>' +
+    '<button class="mini" data-move="' + list + ':' + i + ':1"' + (i === n - 1 ? ' disabled' : '') + ' title="Bajar">↓</button>' +
+    '<button class="mini" data-del="' + list + ':' + i + '" title="Quitar">×</button></span>',
+  visOpts: (sel) => VIS_ANY.map(v => '<option value="' + v + '"' + (String(sel == null ? '' : sel) === v ? ' selected' : '') + '>' + (v || '–') + '</option>').join('')
+};
+
+const Panels = {
+  /* ---------------- herramientas ---------------- */
+  tools(app) {
+    const host = document.getElementById('tools'), d = app.diagram();
+    host.innerHTML = '';
+    if (!d) return;
+    const groups = [{ g: 'Puntero', items: [T('select', null, 'Seleccionar', ICON.select, 'Seleccionar, mover y editar (Esc)')] }].concat(TOOLBARS[d.type] || []);
+    groups.forEach(gr => {
+      const box = document.createElement('div');
+      box.className = 'toolgrp';
+      box.innerHTML = '<h4>' + esc(gr.g) + '</h4>' + gr.items.map(t => {
+        const on = app.tool.kind === t.kind && app.tool.type === t.type && (app.tool.variant || '') === (t.variant || '');
+        return '<button class="tool' + (on ? ' active' : '') + '" title="' + esc(t.tip || '') + '" data-kind="' + t.kind + '" data-type="' + (t.type || '') + '" data-variant="' + (t.variant || '') + '">' + t.icon + '<span>' + esc(t.label) + '</span></button>';
+      }).join('');
+      host.appendChild(box);
+    });
+    host.querySelectorAll('.tool').forEach(btn => {
+      btn.onclick = () => app.setTool({ kind: btn.dataset.kind, type: btn.dataset.type || null, variant: btn.dataset.variant || null });
+    });
+  },
+
+  /* ---------------- pestañas de diagramas ---------------- */
+  tabs(app) {
+    const host = document.getElementById('tabs'), pr = app.doc.project;
+    host.innerHTML = '';
+    pr.diagrams.forEach(d => {
+      const b = document.createElement('button');
+      b.className = 'tab' + (d.id === pr.activeId ? ' active' : '');
+      b.title = DIAGRAMS[d.type].name + ' — doble clic para renombrar';
+      b.innerHTML = '<span>' + esc(d.name) + '</span>' + (pr.diagrams.length > 1 ? '<span class="x" title="Quitar diagrama">×</span>' : '');
+      b.onclick = (ev) => {
+        if (ev.target.classList.contains('x')) { app.removeDiagram(d.id); return; }
+        app.setActive(d.id);
+      };
+      b.ondblclick = async () => {
+        const n = await UI.prompt('Renombrar diagrama', 'Nombre', d.name);
+        if (n) { d.name = n; app.commit(); }
+      };
+      host.appendChild(b);
+    });
+  },
+
+  /* ---------------- propiedades ---------------- */
+  props(app) {
+    const host = document.getElementById('props'), d = app.diagram();
+    host.innerHTML = '';
+    if (!d) return;
+    const sel = app.sel;
+    let html = '<datalist id="mults">' + MULTS.filter(Boolean).map(m => '<option value="' + m + '">').join('') + '</datalist>';
+    let target = null, isRel = false;
+
+    if (sel.length === 0) {
+      html += Panels.diagramForm(app, d);
+    } else if (sel.length > 1) {
+      html += '<span class="badge">' + sel.length + ' elementos seleccionados</span>' +
+        '<p class="empty">Movelos juntos arrastrando, o usá los botones de abajo.</p>' +
+        '<div class="actions"><button class="tb" data-act="dup">Duplicar</button><button class="tb danger" data-act="del">Eliminar</button></div>';
+    } else {
+      const e = byId(d, sel[0]);
+      if (e) { target = e; html += Panels.elementForm(d, e); }
+      else {
+        const r = (d.relations || []).find(x => x.id === sel[0]);
+        if (r) { target = r; isRel = true; html += Panels.relationForm(d, r); }
+      }
+    }
+    host.innerHTML = html;
+    Panels.bind(app, host, target, isRel);
+  },
+
+  diagramForm(app, d) {
+    let h = '<span class="badge">' + esc(DIAGRAMS[d.type].name) + '</span>';
+    h += F.text('Nombre del proyecto', 'proj:name', app.doc.project.name);
+    h += F.text('Nombre del diagrama', 'diag:name', d.name);
+    if (d.type === 'sequence' || d.type === 'communication')
+      h += F.check('Numerar los mensajes', 'diag:options.numbered', !!(d.options && d.options.numbered));
+    h += '<div class="pgroup"><h5>Cómo trabajar aquí</h5><p class="empty">' +
+      'Elegí una herramienta de la izquierda y hacé clic en el lienzo para crear.<br>' +
+      'Para una relación: clic en el origen y luego en el destino.<br>' +
+      'Doble clic edita el nombre. <kbd>Supr</kbd> elimina. <kbd>Ctrl</kbd>+<kbd>Z</kbd> deshace.</p></div>';
+    h += '<div class="pgroup"><h5>Contenido</h5><p class="empty">' + (d.elements || []).length + ' elementos · ' + (d.relations || []).length + ' relaciones</p></div>';
+    return h;
+  },
+
+  elementForm(d, e) {
+    const T2 = { actor: 'Actor', usecase: 'Caso de uso', boundary: 'Límite del sistema', class: 'Clase', interface: 'Interfaz', object: 'Objeto', initial: 'Estado inicial', state: 'Estado', final: 'Estado final', participant: 'Participante', activation: 'Activación', fragment: 'Fragmento', role: 'Rol / objeto', node: 'Nodo', artifact: 'Artefacto' };
+    let h = '<span class="badge">' + esc(T2[e.type] || e.type) + '</span>';
+
+    if (e.type === 'initial' || e.type === 'final') return h + '<p class="empty">Este elemento no tiene propiedades editables.</p>' + Panels.actions();
+    if (e.type === 'activation') return h + '<p class="empty">Activación sobre la línea de vida. Arrastrala verticalmente o cambiá su alto tirando del extremo.</p>' + Panels.actions();
+
+    h += '<div class="pgroup" style="border-top:0;margin-top:0;padding-top:0"><h5>General</h5>';
+    if (e.type === 'object' || e.type === 'role' || (e.type === 'participant' && e.variant === 'object')) {
+      h += F.text('Nombre de la instancia', 'name', e.name, 'cliente1');
+      h += F.text('Clase', 'className', e.className, 'Cliente');
+    } else {
+      h += F.text('Nombre', 'name', e.name);
+    }
+    h += '</div>';
+
+    if (e.type === 'class' || e.type === 'interface') {
+      if (e.type === 'class') { h += '<div class="pgroup"><h5>Opciones</h5>' + F.text('Estereotipo', 'stereotype', e.stereotype, 'p. ej. interface') + F.check('Clase abstracta (nombre en cursiva)', 'abstract', e.abstract) + '</div>'; }
+      h += '<div class="pgroup"><h5>Atributos</h5><div class="rowlist">' +
+        (e.attributes || []).map((a, i) =>
+          '<div class="row attr"><select data-l="attributes" data-i="' + i + '" data-f="vis">' + F.visOpts(a.vis) + '</select>' +
+          '<input data-l="attributes" data-i="' + i + '" data-f="name" value="' + esc(a.name) + '" placeholder="nombre">' +
+          '<input data-l="attributes" data-i="' + i + '" data-f="type" value="' + esc(a.type) + '" placeholder="tipo">' +
+          F.rowBtns('attributes', i, (e.attributes || []).length) + '</div>').join('') +
+        '</div><button class="addbtn" data-add="attributes">+ Agregar atributo</button></div>';
+      h += '<div class="pgroup"><h5>Operaciones</h5><div class="rowlist">' +
+        (e.methods || []).map((m, i) =>
+          '<div class="row meth"><select data-l="methods" data-i="' + i + '" data-f="vis">' + F.visOpts(m.vis) + '</select>' +
+          '<input data-l="methods" data-i="' + i + '" data-f="name" value="' + esc(m.name) + '" placeholder="operacion">' +
+          '<input data-l="methods" data-i="' + i + '" data-f="ret" value="' + esc(m.ret) + '" placeholder="retorno">' +
+          F.rowBtns('methods', i, (e.methods || []).length) + '</div>' +
+          '<div class="row"><input data-l="methods" data-i="' + i + '" data-f="params" value="' + esc(m.params) + '" placeholder="parámetros"></div>').join('') +
+        '</div><button class="addbtn" data-add="methods">+ Agregar operación</button></div>';
+    }
+    if (e.type === 'object') {
+      h += '<div class="pgroup"><h5>Valores de atributos</h5><div class="rowlist">' +
+        (e.slots || []).map((s, i) =>
+          '<div class="row slot"><input data-l="slots" data-i="' + i + '" data-f="name" value="' + esc(s.name) + '" placeholder="atributo">' +
+          '<input data-l="slots" data-i="' + i + '" data-f="value" value="' + esc(s.value) + '" placeholder="valor">' +
+          F.rowBtns('slots', i, (e.slots || []).length) + '</div>').join('') +
+        '</div><button class="addbtn" data-add="slots">+ Agregar valor</button></div>';
+    }
+    if (e.type === 'state') h += '<div class="pgroup"><h5>Opciones</h5>' + F.text('Actividad interna (do /)', 'doActivity', e.doActivity, 'opcional') + '</div>';
+    if (e.type === 'participant') h += '<div class="pgroup"><h5>Opciones</h5>' + F.select('Representación', 'variant', e.variant, [['object', 'Objeto'], ['actor', 'Actor']]) + '</div>';
+    if (e.type === 'fragment') {
+      h += '<div class="pgroup"><h5>Opciones</h5>' + F.select('Operador', 'op', e.op, ['alt', 'opt', 'loop', 'par', 'ref']) +
+        F.text('Guarda', 'guard', e.guard, '[condición]') +
+        (e.op === 'alt' ? F.text('Segunda guarda', 'guard2', e.guard2, '[si no]') : '') + '</div>';
+    }
+    if (e.type === 'node') h += '<div class="pgroup"><h5>Opciones</h5>' + F.select('Estereotipo', 'stereotype', e.stereotype, STEREO_NODE) + '</div>';
+    if (e.type === 'artifact') h += '<div class="pgroup"><h5>Opciones</h5>' + F.text('Estereotipo', 'stereotype', e.stereotype, 'artifact') + '</div>';
+    /* Contención: se ve y se puede soltar sin arrastrar. */
+    if (PARENT_OF[e.type]) {
+      const host = e.parentId ? byId(d, e.parentId) : null;
+      h += '<div class="pgroup"><h5>Contenedor</h5><p class="empty">' +
+        (host ? 'Dentro de «' + esc(host.name || host.type) + '». Se mueve junto con él.' : 'Suelto en el lienzo. Arrastralo dentro de un contenedor para vincularlo.') +
+        '</p>' + (host ? '<button class="tb" data-act="unparent">Sacar del contenedor</button>' : '') + '</div>';
+    }
+    if (CONTAINERS.indexOf(e.type) >= 0) {
+      const n = Geo.childrenOf(d, e).length;
+      h += '<div class="pgroup"><h5>Contenido</h5><p class="empty">' + n + ' elemento(s) dentro. Al moverlo se mueven con él y no puede achicarse por debajo de ellos.</p></div>';
+    }
+    return h + Panels.actions();
+  },
+
+  relationForm(d, r) {
+    const def = RDEF[r.type] || {};
+    const A = byId(d, r.from), B = byId(d, r.to);
+    const nm = (e) => e ? esc((e.name || Geo.objTitle(e) || TYPE_NAME(e.type))) : '?';
+    let h = '<span class="badge">' + esc(def.label || r.type) + '</span>';
+    h += '<p class="empty" style="margin-top:-4px">' + nm(A) + ' → ' + nm(B) + '</p>';
+
+    if (r.type === 'transition') {
+      h += '<div class="pgroup" style="border-top:0;margin-top:0;padding-top:0"><h5>Transición</h5>' +
+        F.text('Evento', 'event', r.event, 'aprobar') +
+        F.text('Guarda', 'guard', r.guard, 'saldo > 0') +
+        F.text('Acción', 'action', r.action, 'registrar') +
+        '<p class="empty">Se dibuja como: evento [guarda] / acción</p></div>';
+    } else if (r.type === 'connector') {
+      const ms = r.messages || [];
+      h += '<div class="pgroup" style="border-top:0;margin-top:0;padding-top:0"><h5>Mensajes</h5><div class="rowlist">' +
+        ms.map((m, i) =>
+          '<div class="row msg"><input data-l="messages" data-i="' + i + '" data-f="n" value="' + esc(m.n) + '" placeholder="1">' +
+          '<input data-l="messages" data-i="' + i + '" data-f="text" value="' + esc(m.text) + '" placeholder="mensaje()">' +
+          '<select data-l="messages" data-i="' + i + '" data-f="dir" title="Dirección">' +
+          '<option value="ab"' + (m.dir !== 'ba' ? ' selected' : '') + '>' + nm(A).slice(0, 1) + '→' + nm(B).slice(0, 1) + '</option>' +
+          '<option value="ba"' + (m.dir === 'ba' ? ' selected' : '') + '>' + nm(B).slice(0, 1) + '→' + nm(A).slice(0, 1) + '</option></select>' +
+          F.rowBtns('messages', i, ms.length) + '</div>').join('') +
+        '</div><button class="addbtn" data-add="messages">+ Agregar mensaje</button>' +
+        '<button class="addbtn" data-act="renum" style="margin-top:5px">Renumerar 1, 2, 3…</button></div>';
+    } else if (d.type === 'sequence') {
+      h += F.text('Mensaje', 'label', r.label, 'realizarCompra()');
+      h += F.select('Tipo', 'type', r.type, [['message', 'Mensaje'], ['return', 'Retorno']]);
+      const total = (d.relations || []).length;
+      h += '<div class="pgroup"><h5>Orden en el tiempo</h5><p class="empty">Mensaje ' + (r.seq || 1) + ' de ' + total + '. Arrastralo en el lienzo o usá estos botones.</p>' +
+        '<div class="actions"><button class="tb" data-act="up"' + ((r.seq || 1) <= 1 ? ' disabled' : '') + '>↑ Antes</button>' +
+        '<button class="tb" data-act="down"' + ((r.seq || 1) >= total ? ' disabled' : '') + '>↓ Después</button></div></div>';
+    } else {
+      h += F.text('Nombre de la relación', 'label', r.label, 'opcional');
+    }
+
+    if (def.mult) {
+      h += '<div class="pgroup"><h5>Extremo origen — ' + nm(A) + '</h5>' +
+        F.mult('Multiplicidad', 'sourceMultiplicity', r.sourceMultiplicity) +
+        F.text('Rol', 'sourceRole', r.sourceRole, 'opcional') +
+        F.check('Navegable hacia el origen', 'sourceNavigable', r.sourceNavigable) + '</div>';
+      h += '<div class="pgroup"><h5>Extremo destino — ' + nm(B) + '</h5>' +
+        F.mult('Multiplicidad', 'targetMultiplicity', r.targetMultiplicity) +
+        F.text('Rol', 'targetRole', r.targetRole, 'opcional') +
+        F.check('Navegable hacia el destino', 'targetNavigable', r.targetNavigable) + '</div>';
+    }
+
+    if (d.type !== 'sequence') {
+      const np = (r.points || []).length;
+      h += '<div class="pgroup"><h5>Ruta</h5>' +
+        F.select('Trazado', 'routing', r.routing || 'direct', [['direct', 'Directa'], ['orthogonal', 'Ortogonal']]) +
+        '<p class="empty">' + (np ? np + ' punto(s) intermedio(s).' : 'Sin puntos intermedios.') +
+        '<br>Doble clic sobre la línea agrega un punto; doble clic sobre un punto lo quita.' +
+        (r.labelPosition ? '<br>La etiqueta fue movida a mano.' : '') + '</p>' +
+        ((np || r.labelPosition) ? '<button class="addbtn" data-act="reset">Restablecer ruta y etiqueta</button>' : '') +
+        '</div>';
+    }
+    return h + '<div class="actions"><button class="tb" data-act="flip">Invertir sentido</button><button class="tb danger" data-act="del">Eliminar</button></div>';
+  },
+
+  actions() {
+    return '<div class="actions"><button class="tb" data-act="dup">Duplicar</button><button class="tb danger" data-act="del">Eliminar</button></div>';
+  },
+
+  bind(app, host, target, isRel) {
+    const d = app.diagram();
+    host.querySelectorAll('[data-k]').forEach(inp => {
+      const key = inp.dataset.k;
+      const set = () => {
+        const v = inp.type === 'checkbox' ? inp.checked : inp.value;
+        if (key.indexOf('proj:') === 0) app.doc.project[key.slice(5)] = v;
+        else if (key.indexOf('diag:') === 0) {
+          const k = key.slice(5);
+          if (k.indexOf('options.') === 0) { d.options = d.options || {}; d.options[k.slice(8)] = v; }
+          else d[k] = v;
+        } else if (target) {
+          if (key === 'type' && isRel) { target.type = v; }
+          else target[key] = v;
+        }
+      };
+      if (inp.tagName === 'SELECT' || inp.type === 'checkbox') {
+        inp.onchange = () => { set(); app.commit(); };
+      } else {
+        inp.oninput = () => { set(); app.renderCanvas(); app.autosave(); };
+        inp.onchange = () => { set(); app.commit(); };
+      }
+    });
+    host.querySelectorAll('[data-l]').forEach(inp => {
+      const l = inp.dataset.l, i = +inp.dataset.i, f = inp.dataset.f;
+      const set = () => { if (target && target[l] && target[l][i]) target[l][i][f] = inp.value; };
+      if (inp.tagName === 'SELECT') inp.onchange = () => { set(); app.commit(); };
+      else { inp.oninput = () => { set(); app.renderCanvas(); app.autosave(); }; inp.onchange = () => { set(); app.commit(); }; }
+    });
+    host.querySelectorAll('[data-add]').forEach(b => b.onclick = () => {
+      const l = b.dataset.add;
+      target[l] = target[l] || [];
+      if (l === 'attributes') target[l].push({ vis: '-', name: 'atributo', type: 'String' });
+      else if (l === 'methods') target[l].push({ vis: '+', name: 'operacion', params: '', ret: 'void' });
+      else if (l === 'slots') target[l].push({ name: 'atributo', value: '"valor"' });
+      else if (l === 'messages') target[l].push({ n: String(target[l].length + 1), text: 'mensaje()', dir: 'ab' });
+      app.commit();
+    });
+    host.querySelectorAll('[data-move]').forEach(b => b.onclick = () => {
+      const p = b.dataset.move.split(':'), l = p[0], i = +p[1], dir = +p[2];
+      const list = target && target[l];
+      if (!list || !list[i] || !list[i + dir]) return;
+      const q = list[i]; list[i] = list[i + dir]; list[i + dir] = q;
+      app.commit();
+    });
+    host.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+      const p = b.dataset.del.split(':');
+      if (target && target[p[0]]) { target[p[0]].splice(+p[1], 1); app.commit(); }
+    });
+    host.querySelectorAll('[data-act]').forEach(b => b.onclick = () => {
+      const a = b.dataset.act;
+      if (a === 'del') app.deleteSelection();
+      if (a === 'dup') app.duplicateSelection();
+      if (a === 'flip' && target) app.flipRelation(target);
+      if (a === 'reset' && target) app.resetRoute(target);
+      if (a === 'renum' && target) {
+        (target.messages || []).forEach((m, i) => { m.n = String(i + 1); });
+        app.commit();
+      }
+      if (a === 'unparent' && target) { delete target.parentId; app.commit(); }
+      if ((a === 'up' || a === 'down') && target) app.moveMessage(target, a === 'up' ? -1 : 1);
+    });
+  },
+
+  /* ---------------- Diseño Orientado a Objetos ---------------- */
+  /* Dibuja la tabla a partir de app.oop.rows. Solo se reconstruye ante cambios
+     de estructura (abrir, agregar, quitar, sincronizar): mientras se escribe
+     únicamente se guarda el texto en la fila, sin rehacer el SVG. */
+  oop(app) {
+    const host = document.getElementById('oopRows');
+    if (!host) return;
+    const rows = app.oop.rows;
+    host.innerHTML = rows.map((r, i) =>
+      '<tr data-rid="' + r.rid + '">' +
+      '<td class="c1"><input type="text" data-f="name" value="' + esc(r.name) + '" placeholder="Cliente" spellcheck="false"></td>' +
+      '<td><textarea data-f="attrs" rows="3" spellcheck="false" placeholder="nombre&#10;apellido&#10;telefono">' + esc(r.attrs) + '</textarea></td>' +
+      '<td><textarea data-f="methods" rows="3" spellcheck="false" placeholder="realizarCompra()&#10;realizarPago()">' + esc(r.methods) + '</textarea></td>' +
+      '<td class="c4">' +
+      '<button class="mini" data-r="dup" title="Duplicar fila">⧉</button>' +
+      '<button class="mini" data-r="del" title="Quitar fila">×</button></td></tr>').join('');
+    document.getElementById('oopEmpty').style.display = rows.length ? 'none' : 'block';
+
+    host.querySelectorAll('tr').forEach(tr => {
+      const r = rows.find(x => x.rid === tr.dataset.rid);
+      tr.querySelectorAll('[data-f]').forEach(inp => {
+        const f = inp.dataset.f;
+        inp.oninput = () => { r[f] = inp.value; inp.classList.remove('bad'); Panels.grow(inp); app.oopTouched(); };
+        inp.onchange = () => { r[f] = inp.value; app.oopStore(); };
+        Panels.grow(inp);
+      });
+      tr.querySelectorAll('[data-r]').forEach(b => {
+        b.onclick = () => { if (b.dataset.r === 'dup') app.oopDuplicate(r.rid); else app.oopRemove(r.rid); };
+      });
+    });
+    Panels.oopFoot(app);
+  },
+  /* Los textarea crecen con su contenido para que nada quede oculto. */
+  grow(inp) {
+    if (inp.tagName !== 'TEXTAREA') return;
+    inp.style.height = 'auto';
+    inp.style.height = Math.max(62, (inp.scrollHeight || 0) + 3) + 'px';
+  },
+  oopFoot(app) {
+    const f = document.getElementById('oopFoot');
+    if (!f) return;
+    const rows = app.oop.rows;
+    const enDiagrama = rows.filter(r => r.ref && byId(app.diagram(), r.ref)).length;
+    f.textContent = rows.length + ' fila(s) · ' + enDiagrama + ' ya en el diagrama · ' +
+      'Sincronizar crea o actualiza las clases; las relaciones las hacés vos en el lienzo.';
+  },
+
+  /* ---------------- menú contextual ---------------- */
+  context(app, x, y, kind, pt) {
+    const m = document.getElementById('ctx');
+    const d = app.diagram();
+    const r = kind === 'relation' ? app.relById(app.sel[0]) : null;
+    const items = kind === 'element'
+      ? [['edit', 'Editar nombre'], ['dup', 'Duplicar'], ['copy', 'Copiar'], ['-', ''], ['del', 'Eliminar']]
+      : kind === 'relation'
+        ? (d.type === 'sequence'
+          ? [['edit', 'Editar mensaje'], ['-', ''], ['del', 'Eliminar']]
+          : [['edit', 'Editar etiqueta'], ['point', 'Agregar punto aquí'],
+             ['route', (r && r.routing === 'orthogonal') ? 'Trazado directo' : 'Trazado ortogonal'],
+             ['reset', 'Restablecer ruta'], ['flip', 'Invertir sentido'], ['-', ''], ['del', 'Eliminar']])
+        : [['paste', 'Pegar'], ['all', 'Seleccionar todo'], ['-', ''], ['fit', 'Ajustar al lienzo']];
+    m.innerHTML = items.map(it => it[0] === '-' ? '<hr>' : '<button data-c="' + it[0] + '">' + it[1] + '</button>').join('');
+    m.style.display = 'block';
+    const w = m.offsetWidth || 190, h = m.offsetHeight || 160;
+    m.style.left = Math.min(x, innerWidth - w - 8) + 'px';
+    m.style.top = Math.min(y, innerHeight - h - 8) + 'px';
+    m.querySelectorAll('button').forEach(b => b.onclick = () => {
+      const c = b.dataset.c;
+      m.style.display = 'none';
+      if (c === 'edit') { const e = byId(app.diagram(), app.sel[0]) || (app.diagram().relations || []).find(r => r.id === app.sel[0]); if (e) app.startInline(e); }
+      if (c === 'dup') app.duplicateSelection();
+      if (c === 'copy') app.copy();
+      if (c === 'del') app.deleteSelection();
+      if (c === 'paste') app.paste();
+      if (c === 'all') app.selectAll();
+      if (c === 'fit') app.canvas.fit();
+      if (c === 'point' && r) app.addWaypointAt(r, pt);
+      if (c === 'route' && r) app.setRouting(r, r.routing === 'orthogonal' ? 'direct' : 'orthogonal');
+      if (c === 'reset' && r) app.resetRoute(r);
+      if (c === 'flip' && r) app.flipRelation(r);
+    });
+  }
+};
+/* =========================================================================
+   6. Exportación: proyecto en JSON, diagrama en SVG y en PNG
+   ========================================================================= */
+
+const slug = (s) => String(s || 'diagrama').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || 'diagrama';
+
+const ExportManager = {
+  /* base64 de un texto UTF-8 (btoa solo acepta bytes: «», ñ y las tildes
+     rompen la conversión directa). */
+  b64utf8(str) {
+    const bytes = new TextEncoder().encode(str);
+    let bin = '', step = 0x8000;
+    for (let i = 0; i < bytes.length; i += step) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + step));
+    return btoa(bin);
+  },
+
+  download(name, data, mime) {
+    const blob = data instanceof Blob ? data : new Blob([data], { type: mime || 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  },
+
+  json(app) {
+    const name = slug(app.doc.project.name) + '.miniuml.json';
+    ExportManager.download(name, JSON.stringify(app.doc, null, 2), 'application/json');
+    return name;
+  },
+
+  /* Devuelve el diagrama como SVG independiente (sin la interfaz). */
+  /* Caja del diagrama incluyendo las etiquetas de las relaciones, que pueden
+     sobresalir de los elementos. Hay que construir la escena primero. */
+  box(d, sc) {
+    const b = Geo.contentBox(d), L = sc && sc.labels;
+    let x1 = b.x, y1 = b.y, x2 = b.x + b.w, y2 = b.y + b.h;
+    if (L && L.x2 > -1e8) { x1 = Math.min(x1, L.x1); y1 = Math.min(y1, L.y1); x2 = Math.max(x2, L.x2); y2 = Math.max(y2, L.y2); }
+    return { x: x1, y: y1, w: Math.max(40, x2 - x1), h: Math.max(40, y2 - y1) };
+  },
+
+  svgString(d) {
+    const pad = 26;
+    const sc = Render.scene(d, { selected: [] });
+    const b = ExportManager.box(d, sc);
+    const x = Math.round(b.x - pad), y = Math.round(b.y - pad);
+    const w = Math.round(b.w + pad * 2), h = Math.round(b.h + pad * 2);
+    /* El serializador agrega solo el xmlns: no hay que repetirlo o el XML queda inválido. */
+    const root = el('svg', { width: w, height: h, viewBox: x + ' ' + y + ' ' + w + ' ' + h, version: '1.1' });
+    root.appendChild(el('rect', { x: x, y: y, width: w, height: h, fill: '#ffffff' }));
+    const g = el('g');
+    sc.back.concat(sc.rels, sc.els).forEach(n => g.appendChild(n));
+    root.appendChild(g);
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(root);
+  },
+
+  svg(app) {
+    const d = app.diagram();
+    const name = slug(d.name) + '.svg';
+    ExportManager.download(name, ExportManager.svgString(d), 'image/svg+xml;charset=utf-8');
+    return name;
+  },
+
+  png(app) {
+    const d = app.diagram(), scale = 2;
+    const str = ExportManager.svgString(d);          // deja Render._ext actualizado
+    const b = ExportManager.box(d, { labels: Render._ext }), pad = 26;
+    const w = Math.round(b.w + pad * 2), h = Math.round(b.h + pad * 2);
+    return new Promise((res, rej) => {
+      let url = null, usedBlob = false;
+      const cleanup = () => { if (url && usedBlob) URL.revokeObjectURL(url); };
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const cv = document.createElement('canvas');
+          cv.width = Math.max(1, w * scale); cv.height = Math.max(1, h * scale);
+          const ctx = cv.getContext('2d');
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, cv.width, cv.height);
+          ctx.drawImage(img, 0, 0, cv.width, cv.height);
+          cleanup();
+          cv.toBlob(bl => {
+            if (!bl) { rej(new Error('png')); return; }
+            const name = slug(d.name) + '.png';
+            ExportManager.download(name, bl);
+            res(name);
+          }, 'image/png');
+        } catch (e) { cleanup(); rej(e); }
+      };
+      img.onerror = () => {
+        if (usedBlob) {                       // reintento con data URL en UTF-8
+          cleanup(); usedBlob = false;
+          img.src = 'data:image/svg+xml;base64,' + ExportManager.b64utf8(str);
+          return;
+        }
+        rej(new Error('png'));
+      };
+      try {
+        url = URL.createObjectURL(new Blob([str], { type: 'image/svg+xml;charset=utf-8' }));
+        usedBlob = true;
+        img.src = url;
+      } catch (e) {
+        img.src = 'data:image/svg+xml;base64,' + ExportManager.b64utf8(str);
+      }
+    });
+  }
+};
+/* =========================================================================
+   7. Proyecto de ejemplo: Sistema de Biblioteca (los siete diagramas)
+   ========================================================================= */
+
+function exampleDoc() {
+  const mk = (t, x, y, ex) => Object.assign(ElementFactory.create(t, x, y, ex && ex.variant), ex || {});
+  const rel = (t, a, b, ex) => Object.assign(ElementFactory.relation(t, a.id, b.id), ex || {});
+  const dg = (type, name, elements, relations) => {
+    const d = Doc.newDiagram(type, name);
+    d.elements = elements; d.relations = relations;
+    return d;
+  };
+
+  /* --- 1. Casos de uso --- */
+  const bnd = mk('boundary', 280, 60, { w: 500, h: 420, name: 'Sistema de Biblioteca' });
+  const aUsu = mk('actor', 130, 200, { name: 'Usuario' });
+  const aBib = mk('actor', 840, 415, { name: 'Bibliotecario' });
+  const u1 = mk('usecase', 320, 110, { name: 'Consultar libro' });
+  const u2 = mk('usecase', 320, 210, { name: 'Realizar préstamo' });
+  const u3 = mk('usecase', 320, 310, { name: 'Devolver libro' });
+  const u4 = mk('usecase', 320, 400, { name: 'Registrar socio' });
+  const u5 = mk('usecase', 560, 155, { name: 'Verificar disponibilidad' });
+  const u6 = mk('usecase', 560, 300, { name: 'Notificar retraso' });
+  const dUse = dg('usecase', 'Casos de Uso', [bnd, aUsu, aBib, u1, u2, u3, u4, u5, u6], [
+    rel('association', aUsu, u1), rel('association', aUsu, u2), rel('association', aUsu, u3),
+    rel('association', aBib, u4), rel('association', aBib, u2),
+    rel('include', u2, u5), rel('extend', u6, u3)
+  ]);
+
+  /* --- 2. Clases --- */
+  const cPer = mk('class', 420, 40, {
+    name: 'Persona', abstract: true,
+    attributes: [{ vis: '-', name: 'nombre', type: 'String' }, { vis: '-', name: 'cedula', type: 'String' }],
+    methods: [{ vis: '+', name: 'obtenerDatos', params: '', ret: 'String' }]
+  });
+  const cUsu = mk('class', 200, 210, {
+    name: 'Usuario',
+    attributes: [{ vis: '-', name: 'codigoSocio', type: 'String' }],
+    methods: [{ vis: '+', name: 'solicitarPrestamo', params: 'libro : Libro', ret: 'Prestamo' }]
+  });
+  const cBib = mk('class', 640, 210, {
+    name: 'Bibliotecario',
+    attributes: [{ vis: '-', name: 'legajo', type: 'String' }],
+    methods: [{ vis: '+', name: 'registrarPrestamo', params: 'p : Prestamo', ret: 'void' }]
+  });
+  const cPre = mk('class', 200, 410, {
+    name: 'Prestamo',
+    attributes: [{ vis: '-', name: 'fecha', type: 'Date' }, { vis: '-', name: 'fechaDevolucion', type: 'Date' }, { vis: '-', name: 'estado', type: 'String' }],
+    methods: [{ vis: '+', name: 'registrar', params: '', ret: 'void' }, { vis: '+', name: 'calcularMulta', params: '', ret: 'double' }]
+  });
+  const cLib = mk('class', 640, 410, {
+    name: 'Libro',
+    attributes: [{ vis: '-', name: 'isbn', type: 'String' }, { vis: '-', name: 'titulo', type: 'String' }, { vis: '-', name: 'estado', type: 'String' }],
+    methods: [{ vis: '+', name: 'estaDisponible', params: '', ret: 'boolean' }]
+  });
+  const cAut = mk('class', 640, 610, {
+    name: 'Autor',
+    attributes: [{ vis: '-', name: 'nombre', type: 'String' }],
+    methods: []
+  });
+  const cMul = mk('class', 200, 620, {
+    name: 'Multa',
+    attributes: [{ vis: '-', name: 'monto', type: 'double' }],
+    methods: [{ vis: '+', name: 'cobrar', params: '', ret: 'void' }]
+  });
+  const iPre = mk('interface', 940, 600, {
+    name: 'Prestable',
+    methods: [{ vis: '+', name: 'prestar', params: 'u : Usuario', ret: 'void' }]
+  });
+  const dCls = dg('class', 'Clases', [cPer, cUsu, cBib, cPre, cLib, cAut, cMul, iPre], [
+    rel('generalization', cUsu, cPer), rel('generalization', cBib, cPer),
+    rel('association', cUsu, cPre, { sourceMultiplicity: '1', targetMultiplicity: '0..*', sourceRole: 'socio', label: 'solicita', targetNavigable: true }),
+    rel('association', cBib, cPre, { sourceMultiplicity: '1', targetMultiplicity: '0..*', label: 'registra' }),
+    rel('association', cPre, cLib, { sourceMultiplicity: '0..*', targetMultiplicity: '1', targetRole: 'ejemplar' }),
+    rel('aggregation', cLib, cAut, { sourceMultiplicity: '1', targetMultiplicity: '1..*' }),
+    rel('composition', cPre, cMul, { sourceMultiplicity: '1', targetMultiplicity: '0..1' }),
+    rel('dependency', cBib, cLib, { label: 'usa' }),
+    rel('realization', cLib, iPre)
+  ]);
+
+  /* --- 3. Objetos --- */
+  const oUsu = mk('object', 110, 90, { name: 'usuario1', className: 'Usuario', slots: [{ name: 'nombre', value: '"Angelito"' }, { name: 'codigoSocio', value: '"U-014"' }] });
+  const oPre = mk('object', 110, 290, { name: 'prestamo1', className: 'Prestamo', slots: [{ name: 'fecha', value: '"2026-03-02"' }, { name: 'estado', value: '"Activo"' }] });
+  const oLib = mk('object', 440, 290, { name: 'libro1', className: 'Libro', slots: [{ name: 'titulo', value: '"El Aleph"' }, { name: 'estado', value: '"Prestado"' }] });
+  const dObj = dg('object', 'Objetos', [oUsu, oPre, oLib], [
+    rel('link', oUsu, oPre), rel('link', oPre, oLib)
+  ]);
+
+  /* --- 4. Estados (ciclo de vida de Libro) --- */
+  const sIni = mk('initial', 120, 70);
+  const sDis = mk('state', 180, 150, { name: 'Disponible' });
+  const sRes = mk('state', 450, 150, { name: 'Reservado' });
+  const sPre = mk('state', 470, 320, { name: 'Prestado', doActivity: 'controlar vencimiento' });
+  const sFin = mk('final', 208, 470);
+  const dSta = dg('state', 'Estados', [sIni, sDis, sRes, sPre, sFin], [
+    rel('transition', sIni, sDis, { event: '' }),
+    rel('transition', sDis, sRes, { event: 'reservar', guard: 'socio habilitado' }),
+    rel('transition', sRes, sPre, { event: 'retirar', action: 'registrarPrestamo' }),
+    rel('transition', sDis, sPre, { event: 'prestar', guard: 'sin reservas', action: 'registrarPrestamo' }),
+    rel('transition', sPre, sDis, { event: 'devolver', action: 'calcularMulta' }),
+    rel('transition', sDis, sFin, { event: 'darDeBaja' })
+  ]);
+
+  /* --- 5. Secuencia (escenario de Realizar préstamo) --- */
+  const pUsu = mk('participant', 70, 40, { variant: 'actor', name: 'Usuario' });
+  const pSis = mk('participant', 230, 40, { variant: 'object', name: '', className: 'Sistema' });
+  const pLib = mk('participant', 430, 40, { variant: 'object', name: '', className: 'Libro' });
+  const pPre = mk('participant', 620, 40, { variant: 'object', name: '', className: 'Prestamo' });
+  const frag = mk('fragment', 190, 178, { w: 570, h: 190, op: 'opt', guard: '[socio habilitado]', guard2: '' });
+  const dSeq = dg('sequence', 'Secuencia', [pUsu, pSis, pLib, pPre, frag,
+    mk('activation', 0, 140, { owner: pSis.id, h: 272 }),
+    mk('activation', 0, 215, { owner: pLib.id, h: 48 })
+  ], [
+    rel('message', pUsu, pSis, { label: 'solicitarPrestamo(isbn)', y: 150 }),
+    rel('message', pSis, pLib, { label: 'estaDisponible()', y: 220 }),
+    rel('return', pLib, pSis, { label: 'true', y: 258 }),
+    rel('message', pSis, pPre, { label: 'registrar()', y: 300 }),
+    rel('message', pSis, pLib, { label: 'marcarPrestado()', y: 345 }),
+    rel('return', pSis, pUsu, { label: 'comprobante', y: 400 })
+  ]);
+
+  /* --- 6. Comunicación --- */
+  const rUsu = mk('role', 90, 130, { name: '', className: 'Usuario' });
+  const rSis = mk('role', 360, 130, { name: '', className: 'Sistema' });
+  const rLib = mk('role', 360, 320, { name: '', className: 'Libro' });
+  const rPre = mk('role', 640, 220, { name: '', className: 'Prestamo' });
+  const dCom = dg('communication', 'Comunicación', [rUsu, rSis, rLib, rPre], [
+    rel('connector', rUsu, rSis, { messages: [{ n: '1', text: 'solicitarPrestamo(isbn)', dir: 'ab' }] }),
+    rel('connector', rSis, rLib, { messages: [{ n: '2', text: 'estaDisponible()', dir: 'ab' }] }),
+    rel('connector', rSis, rPre, { messages: [{ n: '3', text: 'registrar()', dir: 'ab' }] })
+  ]);
+
+  /* --- 7. Despliegue --- */
+  const nCli = mk('node', 80, 90, { w: 250, h: 150, name: 'PC Cliente', stereotype: 'device' });
+  const nApp = mk('node', 470, 60, { w: 300, h: 170, name: 'Servidor de Aplicaciones', stereotype: 'server' });
+  const nBd = mk('node', 470, 330, { w: 300, h: 160, name: 'Servidor de Base de Datos', stereotype: 'database' });
+  const arCli = mk('artifact', 110, 165, { w: 190, name: 'clienteWeb.html' });
+  const arApp = mk('artifact', 505, 150, { w: 210, name: 'biblioteca.jar' });
+  const arBd = mk('artifact', 505, 410, { w: 210, name: 'biblioteca.db' });
+  const dDep = dg('deployment', 'Despliegue', [nCli, nApp, nBd, arCli, arApp, arBd], [
+    rel('commpath', nCli, nApp, { label: '«HTTP»' }),
+    rel('commpath', nApp, nBd, { label: '«JDBC»' })
+  ]);
+
+  const diagrams = [dUse, dCls, dObj, dSta, dSeq, dCom, dDep];
+  return {
+    application: APP_NAME, version: APP_VERSION,
+    project: { id: uid('p'), name: 'Sistema de Biblioteca', created: nowName(), diagrams: diagrams, activeId: dUse.id }
+  };
+}
+/* =========================================================================
+   8. Aplicación: comandos, teclado, proyectos y arranque
+   ========================================================================= */
+
+class Application {
+  constructor() {
+    const ui = StorageManager.loadUI();
+    document.documentElement.setAttribute('data-theme', ui.theme === 'light' ? 'light' : 'dark');
+    let doc = null;
+    try { doc = StorageManager.load(); } catch (e) { doc = null; }
+    this.doc = doc || Doc.empty('Proyecto sin título');
+    this.sel = [];
+    this.tool = { kind: 'select', type: null, variant: null };
+    this.clip = null;
+    this.inline = null;
+    this.oop = { open: false, rows: [] };
+    this._t = 0;
+    this.hist = new HistoryManager(60);
+    this.canvas = new CanvasManager(this);
+    this.canvas.grid = ui.grid !== false;
+    this.canvas.snapOn = ui.snap !== false;
+    this.bind();
+    this.hist.reset(this.doc);
+    this.refresh();
+    this.canvas.fit();
+  }
+
+  /* ---------------- estado ---------------- */
+  diagram() { const pr = this.doc.project; return pr.diagrams.find(d => d.id === pr.activeId) || pr.diagrams[0]; }
+  relById(id) { return (this.diagram().relations || []).find(r => r.id === id); }
+  editing() { return !!this.inline; }
+
+  select(ids) { this.sel = ids.slice ? ids.slice() : [ids]; this.refreshSide(); }
+  toggleSel(id) { const i = this.sel.indexOf(id); if (i >= 0) this.sel.splice(i, 1); else this.sel.push(id); this.refreshSide(); }
+  selectAll() { const d = this.diagram(); this.select((d.elements || []).map(e => e.id)); }
+  refreshSide() { Panels.props(this); this.canvas.render(); }
+
+  setTool(t) {
+    this.tool = { kind: t.kind, type: t.type || null, variant: t.variant || null };
+    this.canvas.cancelPending();
+    const c = this.canvas.svg;
+    c.classList.toggle('tool-add', t.kind === 'element');
+    c.classList.toggle('tool-link', t.kind === 'relation');
+    if (t.kind === 'relation') this.hint('Hacé clic en el elemento origen y luego en el destino. (Esc cancela)');
+    else if (t.kind === 'element') this.hint('Hacé clic en el lienzo para colocar el elemento.');
+    else this.hint('');
+    Panels.tools(this);
+    this.updateStatus();
+  }
+
+  hint(msg) {
+    const h = document.getElementById('hint');
+    h.textContent = msg || '';
+    h.style.display = msg ? 'block' : 'none';
+  }
+
+  /* ---------------- persistencia ---------------- */
+  autosave() {
+    this.setDirty(true);
+    clearTimeout(this._t);
+    this._t = setTimeout(() => { if (StorageManager.save(this.doc)) this.setDirty(false); }, 500);
+  }
+  saveNow() {
+    clearTimeout(this._t);
+    const ok = StorageManager.save(this.doc);
+    this.setDirty(!ok);
+    return ok;
+  }
+  /* ✓ Guardado / ● Cambios sin guardar */
+  setDirty(v) {
+    this.dirty = !!v;
+    const n = document.getElementById('saveState');
+    if (!n) return;
+    n.textContent = this.dirty ? '● Cambios sin guardar' : '✓ Guardado';
+    n.className = this.dirty ? 'dirty' : 'saved';
+  }
+  saveUI() {
+    StorageManager.saveUI({
+      theme: document.documentElement.getAttribute('data-theme'),
+      grid: this.canvas.grid, snap: this.canvas.snapOn
+    });
+  }
+  commit() { clearTimeout(this._h); this.hist.push(this.doc); this.setDirty(true); this.saveNow(); this.refresh(); }
+  /* Cambios repetidos y rápidos (flechas del teclado) se agrupan en una sola
+     entrada del historial en lugar de una por pulsación. */
+  commitSoon() {
+    this.renderCanvas(); this.autosave();
+    this.setDirty(true);
+    clearTimeout(this._h);
+    this._h = setTimeout(() => { this.hist.push(this.doc); this.saveNow(); this.refresh(); }, 450);
+  }
+  renderCanvas() { this.canvas.requestRender(); }
+
+  refresh() {
+    Panels.tools(this); Panels.tabs(this); Panels.props(this);
+    if (this.oop.open) {
+      const dentro = document.activeElement && document.getElementById('oop').contains(document.activeElement);
+      if (!dentro) {                                   // no se reconstruye mientras el usuario escribe
+        if (this.diagram().type === 'class') { this.oop.rows = Oop.rowsFrom(this.diagram()); Panels.oop(this); }
+        else this.oopClose();
+      }
+    }
+    const s = document.getElementById('selType');
+    if (s) s.value = this.diagram().type;
+    document.getElementById('btnUndo').disabled = !this.hist.canUndo();
+    document.getElementById('btnRedo').disabled = !this.hist.canRedo();
+    this.canvas.render();
+  }
+  updateStatus() {
+    const d = this.diagram();
+    if (!d) return;
+    document.getElementById('stLeft').textContent =
+      this.doc.project.name + ' · ' + d.name + ' · ' + (d.elements || []).length + ' elementos, ' + (d.relations || []).length + ' relaciones';
+    const t = this.tool.kind === 'select' ? 'Seleccionar' : (RDEF[this.tool.type] ? RDEF[this.tool.type].label : (this.tool.type || ''));
+    document.getElementById('stRight').textContent = 'Herramienta: ' + t + ' · Zoom ' + Math.round(this.canvas.k * 100) + '%';
+  }
+
+  /* ---------------- edición del modelo ---------------- */
+  addElementAt(type, pt, variant) {
+    const d = this.diagram();
+    if (type === 'activation') {
+      const p = (d.elements || []).find(e => e.type === 'participant' &&
+        Math.abs(Geo.lifelineX(d, e) - pt.x) < 30 && pt.y > Geo.lifelineTop(d, e) - 10);
+      if (!p) { UI.toast('Hacé clic sobre una línea de vida para colocar la activación.', 'err'); return; }
+      const a = ElementFactory.create('activation', 0, this.canvas.snap(pt.y));
+      a.owner = p.id;
+      d.elements.push(a);
+      this.sel = [a.id]; this.setTool({ kind: 'select' }); this.commit();
+      return;
+    }
+    const isC = CONTAINERS.indexOf(type) >= 0, def = EDEF[type];
+    const e = ElementFactory.create(type, 0, 0, variant);
+    e.x = this.canvas.snap(isC ? pt.x : pt.x - def.w / 2);
+    e.y = this.canvas.snap(isC ? pt.y : pt.y - def.h / 2);
+    if (d.type === 'sequence' && type === 'participant') e.y = 40;
+    d.elements.push(e);
+    const host = Doc.containerAt(d, e);                    // queda dentro del contenedor donde se soltó
+    if (host) e.parentId = host.id;
+    this.sel = [e.id];
+    this.setTool({ kind: 'select' });
+    this.commit();
+  }
+
+  addRelation(type, from, to) {
+    const d = this.diagram();
+    const rule = (RULES[d.type] || {})[type];
+    const def = RDEF[type] || { label: type };
+    const nm = (e) => e.name || Geo.objTitle(e) || e.type;
+    if (!rule) {
+      UI.toast('⚠ Relación no válida\n\n«' + def.label + '» no existe en un ' + DIAGRAMS[d.type].name.toLowerCase() + '.', 'err');
+      return;
+    }
+    const chk = relationCheck(d.type, type, from, to);
+    if (!chk.ok) {
+      const elegido = 'Seleccionaste:\n' + TYPE_NAME(from.type) + ' → ' + TYPE_NAME(to.type);
+      UI.toast(chk.why === 'self'
+        ? '⚠ Relación no válida\n\n«' + def.label + '» no puede unir un elemento consigo mismo.\n\n' + elegido
+        : '⚠ Relación no válida\n\n' + def.label + ' requiere:\n' + ruleText(d.type, type) + '\n\n' + elegido, 'err');
+      return;
+    }
+
+    if (d.type === 'communication' && type === 'message') {
+      let c = (d.relations || []).find(r => r.type === 'connector' &&
+        ((r.from === from.id && r.to === to.id) || (r.from === to.id && r.to === from.id)));
+      if (!c) { c = ElementFactory.relation('connector', from.id, to.id); d.relations.push(c); }
+      c.messages = c.messages || [];
+      let total = 0;
+      (d.relations || []).forEach(r => { total += (r.messages || []).length; });
+      c.messages.push({ n: String(total + 1), text: 'mensaje()', dir: c.from === from.id ? 'ab' : 'ba' });
+      this.sel = [c.id];
+      this.setTool({ kind: 'select' });        // igual que al crear un elemento
+      this.commit();
+      return;
+    }
+    const r = ElementFactory.relation(type, from.id, to.id);
+    if (d.type === 'sequence') {
+      let y = 110, seq = 0;
+      (d.relations || []).forEach(m => { y = Math.max(y, (m.y || 0) + 45); seq = Math.max(seq, m.seq || 0); });
+      r.y = y; r.seq = seq + 1;
+      r.label = type === 'return' ? 'retorno' : 'mensaje()';
+    }
+    d.relations.push(r);
+    if (d.type === 'sequence') { Doc.assignFragment(d, r); Doc.renumber(d); }
+    this.sel = [r.id];
+    this.setTool({ kind: 'select' });          // vuelve al puntero, como el resto de las herramientas
+    this.commit();
+  }
+
+  async deleteSelection() {
+    const d = this.diagram();
+    const elIds = this.sel.filter(id => byId(d, id));
+    const relIds = this.sel.filter(id => !byId(d, id));
+    if (!elIds.length && !relIds.length) return;
+    const attached = (d.relations || []).filter(r =>
+      (elIds.indexOf(r.from) >= 0 || elIds.indexOf(r.to) >= 0) && relIds.indexOf(r.id) < 0);
+    if (attached.length) {
+      const ok = await UI.confirm('Eliminar elemento',
+        'Tiene ' + attached.length + ' relación(es) conectada(s). Si continuás, se eliminan también.', 'Eliminar todo');
+      if (!ok) return;
+    }
+    d.relations = (d.relations || []).filter(r => relIds.indexOf(r.id) < 0 && elIds.indexOf(r.from) < 0 && elIds.indexOf(r.to) < 0);
+    d.elements = (d.elements || []).filter(e => elIds.indexOf(e.id) < 0 && !(e.type === 'activation' && elIds.indexOf(e.owner) >= 0));
+    /* Al quitar un contenedor, sus hijos siguen existiendo: quedan sueltos. */
+    (d.elements || []).forEach(e => { if (e.parentId && !byId(d, e.parentId)) delete e.parentId; });
+    if (d.type === 'sequence') Doc.renumber(d);
+    this.sel = [];
+    this.commit();
+  }
+
+  pasteInto(pack, dx, dy) {
+    const d = this.diagram();
+    if (pack.type !== d.type) { UI.toast('Lo copiado pertenece a otro tipo de diagrama.', 'err'); return; }
+    const map = {}, news = [];
+    pack.elements.forEach(src => {
+      const c = clone(src); c.id = uid(src.type); map[src.id] = c.id;
+      c.x = (c.x || 0) + dx; c.y = (c.y || 0) + dy;
+      news.push({ c: c, srcOwner: src.owner });
+    });
+    const out = [];
+    news.forEach(o => {
+      if (o.c.type === 'activation') { if (!map[o.srcOwner]) return; o.c.owner = map[o.srcOwner]; }
+      out.push(o.c);
+    });
+    out.forEach(c => {
+      if (c.parentId) { if (map[c.parentId]) c.parentId = map[c.parentId]; else delete c.parentId; }
+      d.elements.push(c);
+    });
+    (pack.relations || []).forEach(r => {
+      if (!map[r.from] || !map[r.to]) return;
+      const c = clone(r); c.id = uid('r'); c.from = map[r.from]; c.to = map[r.to];
+      if (c.y) c.y += dy;
+      d.relations.push(c);
+    });
+    this.sel = out.map(e => e.id);
+    this.reparent(this.sel.filter(id => { const e = byId(d, id); return e && !e.parentId; }));
+    if (d.type === 'sequence') Doc.renumber(d);
+    this.commit();
+  }
+  /* ---------------- puntos intermedios de las relaciones ---------------- */
+  addWaypointAt(r, p) {
+    const d = this.diagram();
+    const g = Render.relGeom(d, r);
+    if (!g || g.kind !== 'poly') { UI.toast('Esta relación no admite puntos intermedios.', 'err'); return; }
+    let best = 0, bd = Infinity;
+    for (let i = 1; i < g.pts.length; i++) {
+      const dist = Geo.distToSeg(p, g.pts[i - 1], g.pts[i]);
+      if (dist < bd) { bd = dist; best = i - 1; }
+    }
+    r.points = r.points || [];
+    r.points.splice(Math.min(best, r.points.length), 0, { x: this.canvas.snap(p.x), y: this.canvas.snap(p.y) });
+    this.sel = [r.id];
+    this.commit();
+    UI.toast('Punto agregado. Arrastralo para dar forma a la línea; doble clic lo quita.');
+  }
+  removeWaypoint(r, i) {
+    if (!r.points || i < 0 || i >= r.points.length) return;
+    r.points.splice(i, 1);
+    this.commit();
+  }
+  resetRoute(r) {
+    r.points = [];
+    delete r.labelPosition;
+    this.commit();
+    UI.toast('Ruta y etiqueta restablecidas', 'ok');
+  }
+  cleanWaypoints(r) {
+    const out = [];
+    (r.points || []).forEach(q => {
+      const last = out[out.length - 1];
+      if (last && Math.abs(last.x - q.x) < 2 && Math.abs(last.y - q.y) < 2) return;   // puntos pegados
+      out.push(q);
+    });
+    r.points = out;
+  }
+  setRouting(r, mode) {
+    r.routing = mode === 'orthogonal' ? 'orthogonal' : 'direct';
+    this.commit();
+  }
+
+  /* Adelanta o atrasa un mensaje de secuencia intercambiándolo con su vecino. */
+  moveMessage(r, dir) {
+    const d = this.diagram();
+    const ms = Doc.renumber(d);
+    const i = ms.indexOf(r), j = i + dir;
+    if (i < 0 || j < 0 || j >= ms.length) return;
+    const o = ms[j];
+    if ((r.y || 0) === (o.y || 0)) { const q = r.seq; r.seq = o.seq; o.seq = q; }
+    else { const y = r.y; r.y = o.y; o.y = y; }
+    Doc.renumber(d);
+    this.commit();
+  }
+
+  /* Invierte una relación conservando el significado de cada extremo. */
+  flipRelation(t) {
+    const f = t.from; t.from = t.to; t.to = f;
+    const m = t.sourceMultiplicity; t.sourceMultiplicity = t.targetMultiplicity; t.targetMultiplicity = m;
+    const rr = t.sourceRole; t.sourceRole = t.targetRole; t.targetRole = rr;
+    const nv = t.sourceNavigable; t.sourceNavigable = t.targetNavigable; t.targetNavigable = nv;
+    if ((t.points || []).length) t.points.reverse();
+    this.commit();
+  }
+
+  /* Recalcula a qué contenedor pertenece cada elemento después de moverlo. */
+  reparent(ids) {
+    const d = this.diagram();
+    let changed = false;
+    (ids || []).forEach(id => {
+      const e = byId(d, id);
+      if (!e || !PARENT_OF[e.type]) return;
+      const host = Doc.containerAt(d, e);
+      const now = host ? host.id : null;
+      if ((e.parentId || null) === now) return;
+      if (now) e.parentId = now; else delete e.parentId;
+      changed = true;
+    });
+    return changed;
+  }
+
+  pack() {
+    const d = this.diagram();
+    const els = this.sel.map(id => byId(d, id)).filter(Boolean);
+    if (!els.length) return null;
+    const ids = els.map(e => e.id);
+    return { type: d.type, elements: clone(els), relations: clone((d.relations || []).filter(r => ids.indexOf(r.from) >= 0 && ids.indexOf(r.to) >= 0)) };
+  }
+  copy() { const p = this.pack(); if (!p) return; this.clip = p; UI.toast(p.elements.length + ' elemento(s) copiado(s)'); }
+  paste() { if (!this.clip) { UI.toast('No hay nada para pegar.', 'err'); return; } this.pasteInto(this.clip, 30, 30); }
+  duplicateSelection() { const p = this.pack(); if (!p) return; this.pasteInto(p, 24, 24); }
+
+  restore(s) {
+    const cur = this.doc.project.activeId;
+    this.canvas.pending = null; this.canvas.drag = null; this.canvas.band = null;   // nada apuntando al documento viejo
+    this.inline = null; document.getElementById('inlineEdit').style.display = 'none';
+    this.doc = s;
+    if (s.project.diagrams.some(d => d.id === cur)) s.project.activeId = cur;  // deshacer no cambia de diagrama
+    this.sel = []; this.saveNow(); this.refresh();
+  }
+  undo() { const s = this.hist.undo(); if (s) this.restore(s); }
+  redo() { const s = this.hist.redo(); if (s) this.restore(s); }
+
+  /* ---------------- edición en el lienzo ---------------- */
+  startInline(t) {
+    const d = this.diagram();
+    const isRel = !byId(d, t.id);
+    if (!isRel && ['initial', 'final', 'activation'].indexOf(t.type) >= 0) return;
+    const field = isRel ? (t.type === 'transition' ? 'event' : 'label') : (t.type === 'fragment' ? 'guard' : 'name');
+    const inp = document.getElementById('inlineEdit');
+    let left, top, width;
+    if (isRel) {
+      const g = Render.relGeom(d, t); if (!g) return;
+      const s = this.canvas.toScreen(g.mid);
+      width = 170; left = s.x - width / 2; top = s.y - 24;
+    } else {
+      const b = Geo.bounds(d, t), s = this.canvas.toScreen({ x: b.x, y: b.y });
+      width = Math.max(110, b.w * this.canvas.k); left = s.x; top = s.y + 4;
+    }
+    inp.style.display = 'block';
+    inp.style.left = Math.round(left) + 'px';
+    inp.style.top = Math.round(top) + 'px';
+    inp.style.width = Math.round(width) + 'px';
+    inp.value = t[field] == null ? '' : t[field];
+    this.inline = { target: t, field: field, orig: inp.value };
+    setTimeout(() => { inp.focus(); inp.select(); }, 0);
+  }
+  commitInline() {
+    const st = this.inline; if (!st) return;
+    this.inline = null;
+    const inp = document.getElementById('inlineEdit');
+    inp.style.display = 'none';
+    if (inp.value !== st.orig) { st.target[st.field] = inp.value; this.commit(); }
+  }
+  cancelInline() {
+    this.inline = null;
+    document.getElementById('inlineEdit').style.display = 'none';
+  }
+
+  /* ---------------- Diseño Orientado a Objetos ---------------- */
+  /* La tabla trabaja siempre sobre un diagrama de clases: si el activo es de
+     otro tipo, se pasa al de clases (creándolo si hace falta). */
+  oopOpen() {
+    if (this.diagram().type !== 'class') {
+      this.chooseType('class');
+      UI.toast('El diseño OO trabaja sobre el diagrama de clases.', 'ok');
+    }
+    this.oop.rows = Oop.rowsFrom(this.diagram());
+    this.oop.open = true;
+    document.getElementById('oop').classList.add('show');
+    document.getElementById('btnOop').classList.add('on');
+    Panels.oop(this);
+  }
+  oopClose() {
+    if (!this.oop.open) return;
+    this.oopStore();
+    this.oop.open = false;
+    document.getElementById('oop').classList.remove('show');
+    document.getElementById('btnOop').classList.remove('on');
+  }
+  oopToggle() { if (this.oop.open) this.oopClose(); else this.oopOpen(); }
+  /* Mientras se escribe solo se marca el proyecto como modificado. */
+  oopTouched() { this.setDirty(true); }
+  /* Al salir de un campo se guarda el texto en el documento (sin historial). */
+  oopStore() {
+    const d = this.diagram();
+    if (!this.oop.open || !d || d.type !== 'class') return;
+    Oop.save(d, this.oop.rows);
+    this.autosave();
+  }
+  oopAdd() {
+    this.oop.rows.push(Oop.emptyRow());
+    this.oopStore();
+    Panels.oop(this);
+    const filas = document.querySelectorAll('#oopRows tr');
+    const ult = filas[filas.length - 1];
+    if (ult) { const i = ult.querySelector('input'); if (i) i.focus(); }
+  }
+  oopDuplicate(rid) {
+    const i = this.oop.rows.findIndex(r => r.rid === rid);
+    if (i < 0) return;
+    const src = this.oop.rows[i];
+    this.oop.rows.splice(i + 1, 0, {
+      rid: uid('fila'), ref: null,                       // la copia todavía no existe en el diagrama
+      name: (src.name || '') + ' copia', attrs: src.attrs, methods: src.methods
+    });
+    this.oopStore();
+    Panels.oop(this);
+  }
+  async oopRemove(rid) {
+    const i = this.oop.rows.findIndex(r => r.rid === rid);
+    if (i < 0) return;
+    const r = this.oop.rows[i], d = this.diagram();
+    const e = r.ref ? byId(d, r.ref) : null;
+    if (e) {
+      const rels = (d.relations || []).filter(x => x.from === e.id || x.to === e.id).length;
+      const ok = await UI.confirm('Quitar clase',
+        '«' + (e.name || 'sin nombre') + '» ya está en el diagrama. Se elimina también del lienzo' +
+        (rels ? ' junto con sus ' + rels + ' relación(es)' : '') + '.', 'Eliminar');
+      if (!ok) return;
+      d.relations = (d.relations || []).filter(x => x.from !== e.id && x.to !== e.id);
+      d.elements = (d.elements || []).filter(x => x.id !== e.id);
+      this.sel = this.sel.filter(id => id !== e.id);
+      this.oop.rows.splice(i, 1);
+      Oop.save(d, this.oop.rows);
+      this.commit();
+    } else {
+      this.oop.rows.splice(i, 1);
+      this.oopStore();
+    }
+    Panels.oop(this);
+  }
+  /* Tabla -> modelo -> diagrama, en una sola operación deshacible. */
+  oopSync() {
+    const d = this.diagram();
+    if (!d || d.type !== 'class') { UI.toast('El diseño OO necesita un diagrama de clases.', 'err'); return; }
+    const res = Oop.sync(d, this.oop.rows);
+    if (res && res.error) {
+      const tr = document.querySelector('#oopRows tr[data-rid="' + res.rid + '"]');
+      if (tr) { const inp = tr.querySelector('input'); if (inp) { inp.classList.add('bad'); inp.focus(); } }
+      UI.toast(res.error === 'duplicada'
+        ? '⚠ La clase «' + res.nombre + '» está dos veces en la tabla. Dejá una sola fila.'
+        : '⚠ La fila ' + res.fila + ' tiene atributos o métodos pero no tiene nombre de clase.', 'err');
+      return;
+    }
+    this.commit();
+    Panels.oop(this);
+    const partes = [];
+    if (res.creadas) partes.push(res.creadas + ' clase(s) creada(s)');
+    if (res.actualizadas) partes.push(res.actualizadas + ' actualizada(s)');
+    UI.toast(partes.length ? partes.join(' y ') + ' en el diagrama.' : 'El diagrama ya estaba al día.', 'ok');
+  }
+  async oopCopy(rich) {
+    const rows = Oop.usables(this.oop.rows);
+    if (!rows.length) { UI.toast('No hay filas con nombre de clase para copiar.', 'err'); return; }
+    const texto = Oop.text(rows);
+    const ok = rich ? await Clip.rich(Oop.html(rows), texto) : await Clip.plain(texto);
+    UI.toast(ok ? (rich ? 'Tabla copiada' : 'Texto copiado')
+      : 'El navegador no permitió usar el portapapeles.', ok ? 'ok' : 'err');
+  }
+
+  /* ---------------- proyectos y diagramas ---------------- */
+  setActive(id) {
+    this.commitInline();
+    this.doc.project.activeId = id;
+    this.sel = [];
+    this.setTool({ kind: 'select' });
+    this.refresh();
+    this.canvas.fit();
+    this.autosave();
+  }
+  addDiagram(type) {
+    const pr = this.doc.project;
+    const n = pr.diagrams.filter(d => d.type === type).length;
+    const d = Doc.newDiagram(type, DIAGRAMS[type].short + (n ? ' ' + (n + 1) : ''));
+    pr.diagrams.push(d); pr.activeId = d.id;
+    this.sel = [];
+    this.commit();
+    this.canvas.fit();
+  }
+  async removeDiagram(id) {
+    const pr = this.doc.project;
+    if (pr.diagrams.length <= 1) { UI.toast('El proyecto necesita al menos un diagrama.', 'err'); return; }
+    const d = pr.diagrams.find(x => x.id === id);
+    const ok = await UI.confirm('Quitar diagrama', 'Se elimina «' + d.name + '» con todo su contenido.', 'Quitar');
+    if (!ok) return;
+    pr.diagrams = pr.diagrams.filter(x => x.id !== id);
+    if (pr.activeId === id) pr.activeId = pr.diagrams[0].id;
+    this.sel = [];
+    this.commit();
+  }
+  chooseType(type) {
+    const pr = this.doc.project;
+    const found = pr.diagrams.find(d => d.type === type);
+    if (found) this.setActive(found.id);
+    else this.addDiagram(type);
+  }
+  async newProject() {
+    const ok = await UI.confirm('Nuevo proyecto',
+      (this.dirty ? 'Hay cambios sin guardar. ' : '') + 'Se descarta el proyecto abierto. Guardalo o exportalo antes si querés conservarlo.', 'Crear');
+    if (!ok) { this.refresh(); return; }
+    const name = await UI.prompt('Nuevo proyecto', 'Nombre del proyecto', 'Sistema de …');
+    this.doc = Doc.empty(name || 'Proyecto sin título');
+    this.sel = []; this.hist.reset(this.doc); this.saveNow(); this.refresh(); this.canvas.fit();
+    UI.toast('Proyecto creado', 'ok');
+  }
+  async loadExample() {
+    const busy = this.doc.project.diagrams.some(d => (d.elements || []).length);
+    if (busy) {
+      const ok = await UI.confirm('Cargar ejemplo', 'Se reemplaza el proyecto abierto por el de demostración.', 'Cargar ejemplo');
+      if (!ok) return;
+    }
+    this.doc = Doc.validate(exampleDoc());     // el ejemplo pasa por la misma validación que un archivo
+    this.sel = []; this.hist.reset(this.doc); this.saveNow(); this.refresh(); this.canvas.fit();
+    UI.toast('Proyecto de ejemplo cargado: Sistema de Biblioteca', 'ok');
+  }
+  openFile(file) {
+    const rd = new FileReader();
+    rd.onload = () => {
+      try {
+        const doc = Doc.validate(JSON.parse(String(rd.result)));
+        const bad = Doc.droppedCount();
+        this.doc = doc; this.sel = []; this.hist.reset(doc); this.saveNow(); this.refresh(); this.canvas.fit();
+        UI.toast('Proyecto cargado: ' + doc.project.name, 'ok');
+        if (bad) UI.toast('Se descartaron ' + bad + ' parte(s) inválida(s) del archivo.', 'err');
+      } catch (e) {
+        UI.toast('El archivo de proyecto no es válido.', 'err');
+      }
+    };
+    rd.onerror = () => UI.toast('No se pudo leer el archivo.', 'err');
+    rd.readAsText(file);
+  }
+
+  hideMenus() {
+    document.getElementById('ctx').style.display = 'none';
+    document.getElementById('exportMenu').classList.remove('open');
+  }
+  showContext(x, y, kind, pt) { Panels.context(this, x, y, kind, pt); }
+
+  /* ---------------- conexión con el DOM ---------------- */
+  bind() {
+    const $ = (id) => document.getElementById(id);
+
+    const sel = $('selType');
+    sel.innerHTML = DIAGRAM_ORDER.map(t => '<option value="' + t + '">' + DIAGRAMS[t].name + '</option>').join('');
+    sel.onchange = () => this.chooseType(sel.value);
+
+    $('btnNew').onclick = () => this.newProject();
+    $('btnSave').onclick = () => { this.saveNow(); UI.toast('Proyecto guardado en este navegador', 'ok'); };
+    $('btnLoad').onclick = async () => {
+      const busy = this.doc.project.diagrams.some(d => (d.elements || []).length);
+      if (busy) {
+        const ok = await UI.confirm('Cargar proyecto',
+          (this.dirty ? 'Hay cambios sin guardar. ' : '') + 'Se reemplaza el proyecto abierto por el del archivo. Exportalo antes si querés conservarlo.', 'Cargar');
+        if (!ok) return;
+      }
+      $('fileIn').click();
+    };
+    $('fileIn').onchange = (ev) => { const f = ev.target.files[0]; if (f) this.openFile(f); ev.target.value = ''; };
+    $('btnUndo').onclick = () => this.undo();
+    $('btnRedo').onclick = () => this.redo();
+    $('btnExample').onclick = () => this.loadExample();
+    $('btnOop').onclick = () => this.oopToggle();
+    $('oopClose').onclick = () => this.oopClose();
+    $('oopAdd').onclick = () => this.oopAdd();
+    $('oopSync').onclick = () => this.oopSync();
+    $('oopCopy').onclick = () => this.oopCopy(true);
+    $('oopCopyTxt').onclick = () => this.oopCopy(false);
+    $('btnAddDiagram').onclick = () => this.addDiagram(sel.value);
+
+    $('btnExport').onclick = (ev) => { ev.stopPropagation(); $('exportMenu').classList.toggle('open'); };
+    $('exportMenu').querySelectorAll('button').forEach(b => b.onclick = () => {
+      this.hideMenus();
+      try {
+        if (b.dataset.x === 'json') UI.toast('Exportado: ' + ExportManager.json(this), 'ok');
+        if (b.dataset.x === 'svg') UI.toast('Exportado: ' + ExportManager.svg(this), 'ok');
+        if (b.dataset.x === 'png') ExportManager.png(this).then(n => UI.toast('Exportado: ' + n, 'ok')).catch(() => UI.toast('No se pudo generar el PNG.', 'err'));
+      } catch (e) { UI.toast('No se pudo exportar.', 'err'); }
+    });
+    document.addEventListener('click', () => this.hideMenus());
+
+    $('btnTheme').onclick = () => {
+      const cur = document.documentElement.getAttribute('data-theme');
+      const next = cur === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      $('btnTheme').textContent = next === 'dark' ? '☾' : '☀';
+      this.saveUI();
+    };
+    $('btnTheme').textContent = document.documentElement.getAttribute('data-theme') === 'dark' ? '☾' : '☀';
+
+    $('zIn').onclick = () => this.canvas.zoomBy(1.2);
+    $('zOut').onclick = () => this.canvas.zoomBy(1 / 1.2);
+    $('zFit').onclick = () => this.canvas.fit();
+    $('zGrid').onclick = () => { this.canvas.grid = !this.canvas.grid; this.canvas.applyView(); this.syncZoomBar(); this.saveUI(); };
+    $('zSnap').onclick = () => { this.canvas.snapOn = !this.canvas.snapOn; this.syncZoomBar(); this.saveUI(); };
+    $('btnLeftPanel').onclick = () => $('left').classList.toggle('show');
+    $('btnRightPanel').onclick = () => $('right').classList.toggle('show');
+
+    const inp = $('inlineEdit');
+    inp.onkeydown = (ev) => {
+      if (ev.key === 'Enter') { ev.preventDefault(); this.commitInline(); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); this.cancelInline(); }
+      ev.stopPropagation();
+    };
+    inp.onblur = () => this.commitInline();
+
+    document.addEventListener('keydown', (ev) => this.onKey(ev));
+    window.addEventListener('resize', () => this.canvas.applyView());
+    window.addEventListener('beforeunload', () => this.saveNow());
+    this.syncZoomBar();
+  }
+
+  syncZoomBar() {
+    document.getElementById('zGrid').classList.toggle('on', this.canvas.grid);
+    document.getElementById('zSnap').classList.toggle('on', this.canvas.snapOn);
+  }
+
+  onKey(ev) {
+    const tag = ((ev.target && ev.target.tagName) || '').toLowerCase();
+    const typing = tag === 'input' || tag === 'textarea' || tag === 'select';
+    const mod = ev.ctrlKey || ev.metaKey;
+    const modal = document.getElementById('modal').classList.contains('open');
+    if (modal && ev.key !== 'Escape') return;                 // el diálogo tiene el foco
+    if (ev.key === 'Escape') {
+      if (typing) { try { ev.target.blur(); } catch (e) { } return; }
+      if (this.oop.open) { this.oopClose(); return; }
+      if (this.inline) { this.cancelInline(); return; }
+      this.canvas.cancelPending(); this.hideMenus(); UI.close();
+      if (this.tool.kind !== 'select') this.setTool({ kind: 'select' });
+      return;
+    }
+    if (mod && ev.key.toLowerCase() === 's') { ev.preventDefault(); this.saveNow(); UI.toast('Proyecto guardado en este navegador', 'ok'); return; }
+    if (typing) return;
+    if (mod && ev.key.toLowerCase() === 'z') { ev.preventDefault(); if (ev.shiftKey) this.redo(); else this.undo(); return; }
+    if (mod && ev.key.toLowerCase() === 'y') { ev.preventDefault(); this.redo(); return; }
+    if (mod && ev.key.toLowerCase() === 'c') { ev.preventDefault(); this.copy(); return; }
+    if (mod && ev.key.toLowerCase() === 'v') { ev.preventDefault(); this.paste(); return; }
+    if (mod && ev.key.toLowerCase() === 'd') { ev.preventDefault(); this.duplicateSelection(); return; }
+    if (mod && ev.key.toLowerCase() === 'a') { ev.preventDefault(); this.selectAll(); return; }
+    if (ev.key === 'Delete' || ev.key === 'Backspace') { ev.preventDefault(); this.deleteSelection(); return; }
+    if (ev.key === '+' || ev.key === '=') { this.canvas.zoomBy(1.2); return; }
+    if (ev.key === '-') { this.canvas.zoomBy(1 / 1.2); return; }
+    if (!mod && this.sel.length && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].indexOf(ev.key) >= 0) {
+      ev.preventDefault();
+      const step = ev.shiftKey ? 1 : 10, d = this.diagram();
+      const dx = (ev.key === 'ArrowLeft' ? -step : ev.key === 'ArrowRight' ? step : 0);
+      const dy = (ev.key === 'ArrowUp' ? -step : ev.key === 'ArrowDown' ? step : 0);
+      this.sel.forEach(id => {
+        const e = byId(d, id); if (!e) return;
+        e.x += dx; e.y += dy;
+        Geo.descendants(d, e).forEach(c => { c.x += dx; c.y += dy; });
+      });
+      this.reparent(this.sel);
+      this.commitSoon();
+    }
+  }
+}
+
+/* Superficie mínima para depurar desde la consola del navegador. */
+window.MiniUML = {
+  Doc: Doc, Geo: Geo, Render: Render, ElementFactory: ElementFactory, ExportManager: ExportManager,
+  StorageManager: StorageManager, Panels: Panels, UI: UI, byId: byId, exampleDoc: exampleDoc,
+  Oop: Oop, Clip: Clip,
+  DIAGRAMS: DIAGRAMS, RULES: RULES, RDEF: RDEF
+};
+
+/* ---------------- arranque ---------------- */
+let app = null;
+function boot() {
+  try {
+    app = new Application();
+    window.app = app;
+  } catch (err) {
+    console.error(err);
+    document.getElementById('stLeft').textContent = 'Ocurrió un error al iniciar MiniUML: ' + err.message;
+  }
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
+
+</script>
+</body>
+</html>
