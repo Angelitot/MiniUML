@@ -2,6 +2,13 @@
 
 **Herramienta académica gratuita para modelado UML y Análisis Orientado a Objetos.**
 
+> ### ❤️ Apoyá el desarrollo de MiniUML
+> MiniUML es gratuito para uso académico y personal. Si la herramienta te resulta útil y querés apoyar voluntariamente su mantenimiento y futuras actualizaciones:
+>
+> **Alias de donación:** `angelvazquezcaceres08@gmail.com`
+>
+> No es necesario realizar ninguna donación para descargar o utilizar MiniUML.
+
 MiniUML es un editor UML de un solo archivo HTML, creado para facilitar el trabajo académico de estudiantes de Ingeniería de Software. El proyecto evoluciona de forma progresiva conforme se incorporan nuevos diagramas y necesidades de la carrera.
 
 ## Autoría
@@ -41,16 +48,6 @@ Descargá `MiniUML.html` y abrilo directamente en un navegador moderno. No requi
 MiniUML no pretende decidir el análisis por el estudiante. La herramienta proporciona la estructura y representación visual; las clases, atributos, métodos y relaciones deben surgir del análisis del problema.
 
 El objetivo es acompañar el aprendizaje de Análisis Orientado a Objetos y UML de manera práctica, clara y accesible.
-
-## Apoyar el proyecto
-
-MiniUML es gratuito para uso académico y personal.
-
-Si la herramienta te resulta útil y querés apoyar voluntariamente su mantenimiento y futuras actualizaciones:
-
-**Alias de donación:** `angelvazquezcaceres08@gmail.com`
-
-Las donaciones son voluntarias y no son necesarias para descargar o utilizar MiniUML.
 
 ## Licencia
 
