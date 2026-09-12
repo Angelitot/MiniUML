@@ -1,9 +1,30 @@
 <!DOCTYPE html>
+<!--
+    MiniUML
+    Herramienta académica gratuita para modelado UML
+    y Análisis Orientado a Objetos.
+
+    Autor original y desarrollador:
+    Angel Vázquez
+
+    Copyright © 2026 Angel Vázquez
+
+    Versión: 1.0.0
+
+    Repositorio oficial:
+    https://github.com/Angelitot/MiniUML
+
+    Proyecto académico independiente, pensado para estudiantes
+    de Ingeniería de Software. Uso gratuito.
+-->
 <html lang="es" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MiniUML — Editor de diagramas UML</title>
+<meta name="application-name" content="MiniUML">
+<meta name="author" content="Angel Vázquez">
+<meta name="description" content="MiniUML — Herramienta académica gratuita para modelado UML y Análisis Orientado a Objetos.">
+<title>MiniUML v1.0.0 — Herramienta académica para UML y Análisis Orientado a Objetos</title>
 <style>
 :root, html[data-theme="dark"]{
   --bg:#0f1319; --panel:#171c24; --panel2:#1e242e; --panel3:#252d39;
@@ -202,6 +223,32 @@ label.check{display:flex;align-items:center;gap:7px;color:var(--muted);margin:0 
 #modal{position:fixed;inset:0;z-index:400;background:rgba(6,10,16,.55);display:none;place-items:center}
 #modal.open{display:grid}
 #modal .box{background:var(--panel);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:18px;width:min(420px,92vw)}
+#status .linkish{background:none;border:0;padding:0;color:var(--muted);font-size:11.5px;text-decoration:underline;text-underline-offset:2px;white-space:nowrap}
+#status .linkish:hover{color:var(--accent)}
+#modal .box.about{width:min(520px,94vw);max-height:88vh;overflow:auto}
+#modal .about h3{margin-bottom:2px}
+#modal .about .sub{margin:0 0 12px;color:var(--muted);line-height:1.5}
+#modal .about dl{margin:0 0 14px;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12.5px;line-height:1.5}
+#modal .about dt{color:var(--muted)}
+#modal .about dd{margin:0;color:var(--text)}
+#modal .about a{color:var(--accent)}
+#modal .about .support{border:1px solid var(--border);border-radius:8px;background:var(--panel2);padding:12px 14px;margin:0 0 14px}
+#modal .about .support h4{margin:0 0 6px;font-size:13px}
+#modal .about .support p{margin:0 0 8px;font-size:12.5px}
+#modal .about .alias{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#modal .about code{background:var(--panel3);border:1px solid var(--border);border-radius:5px;padding:3px 7px;font-size:12.5px;color:var(--text);user-select:all}
+#modal .box.revision{width:min(640px,94vw);max-height:88vh;overflow:auto}
+#modal .revision ul{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:6px}
+#modal .revision li{display:grid;grid-template-columns:auto 1fr;gap:9px;align-items:start;
+  border:1px solid var(--border);border-radius:7px;padding:8px 10px;background:var(--panel2);font-size:12.5px;line-height:1.5}
+#modal .revision li .tag{font-weight:700;font-size:10.5px;letter-spacing:.4px;padding:2px 6px;border-radius:4px;white-space:nowrap}
+#modal .revision li.error .tag{background:rgba(200,71,75,.18);color:var(--danger)}
+#modal .revision li.aviso .tag{background:rgba(224,164,58,.18);color:#d79a2b}
+#modal .revision li.idea .tag{background:var(--accentSoft);color:var(--accent)}
+#modal .revision li button{background:none;border:0;padding:0;text-align:left;color:inherit;font:inherit;cursor:pointer}
+#modal .revision li button:hover{color:var(--accent)}
+#modal .revision .bien{color:var(--ok);font-weight:600}
+#modal .revision .fuente{color:var(--muted);font-size:11.5px;margin:0}
 #modal h3{margin:0 0 10px;font-size:15px}
 #modal p{margin:0 0 14px;color:var(--muted);line-height:1.55}
 #modal input,#modal select,#modal textarea{width:100%;margin-bottom:14px}
@@ -237,6 +284,8 @@ label.check{display:flex;align-items:center;gap:7px;color:var(--muted);margin:0 
     <button class="tb" id="btnRedo" title="Rehacer (Ctrl+Y)">Rehacer</button>
     <button class="tb" id="btnExample" title="Cargar el proyecto de demostración">Ejemplo</button>
     <button class="tb" id="btnOop" title="Tabla Clase / Atributos / Métodos para armar el diagrama de clases">Diseño OO</button>
+    <button class="tb" id="btnTidy" title="Acomodar el diagrama según la vista que corresponde (Ctrl+Shift+O)">Organizar</button>
+    <button class="tb" id="btnReview" title="Revisar el modelo con el criterio de Ingeniería de Software I">Revisar</button>
   </div>
   <div class="spacer"></div>
   <div class="group" id="panelToggles">
@@ -296,7 +345,7 @@ label.check{display:flex;align-items:center;gap:7px;color:var(--muted);margin:0 
   </aside>
 </main>
 
-<footer id="status"><span id="stLeft"></span><span id="saveState" class="saved" title="Estado del guardado en este navegador">✓ Guardado</span><span id="stRight"></span></footer>
+<footer id="status"><span id="stLeft"></span><span id="saveState" class="saved" title="Estado del guardado en este navegador">✓ Guardado</span><span id="stRight"></span><button id="btnAbout" class="linkish" title="Autoría, versión y apoyo al proyecto">MiniUML v1.0.0 · Acerca de</button></footer>
 
 <div id="ctx"></div>
 <div id="toasts"></div>
@@ -309,7 +358,13 @@ label.check{display:flex;align-items:center;gap:7px;color:var(--muted);margin:0 
    1. Núcleo: utilidades, paleta, definiciones de diagramas y herramientas
    ========================================================================= */
 'use strict';
-const APP_NAME = 'MiniUML', APP_VERSION = '1.0';
+const APP_NAME = 'MiniUML', APP_VERSION = '1.0.0';
+/* Datos oficiales del proyecto (coinciden con el repositorio de GitHub). */
+const APP_AUTHOR = 'Angel Vázquez';
+const APP_YEAR = '2026';
+const APP_REPO = 'https://github.com/Angelitot/MiniUML';
+const APP_ALIAS = 'angelvazquezcaceres08@gmail.com';
+const APP_TAGLINE = 'Herramienta académica gratuita para modelado UML y Análisis Orientado a Objetos.';
 const NS = 'http://www.w3.org/2000/svg';
 const FONT = "'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
@@ -1460,6 +1515,554 @@ const Clip = {
     return false;
   }
 };
+
+/* =========================================================================
+   Criterio académico de Ingeniería de Software I.
+
+   Reglas tomadas de las presentaciones del curso y de la guía de trabajo:
+   cada aviso de acá abajo corresponde a algo enseñado en clase, no a una
+   interpretación libre de UML. La fuente de verdad sobre QUÉ puede
+   relacionarse con QUÉ sigue siendo RULES/relationCheck; esto revisa el
+   SIGNIFICADO del modelo, no su sintaxis.
+   ========================================================================= */
+const Academia = {
+  /* Palabras que delatan un dato técnico agregado "por completar" (9na clase). */
+  RUIDO: ['createdat', 'updatedat', 'fechacreacion', 'fechacreación', 'idinterno', 'timestamp',
+    'passwordhash', 'created_at', 'updated_at', 'deletedat'],
+  CRUD: ['crear', 'leer', 'listar', 'actualizar', 'eliminar', 'borrar', 'modificar', 'guardar'],
+  /* Un caso de uso es funcionalidad visible, no un paso de interfaz (10a clase). */
+  INTERFAZ: ['presionar', 'hacer clic', 'clic en', 'clickear', 'apretar', 'abrir ventana',
+    'abrir pantalla', 'mostrar mensaje', 'cerrar ventana', 'botón', 'boton'],
+  MULT: /^(\*|\d+|\d+\.\.(\d+|\*))$/,
+
+  infinitivo(s) {
+    const p = String(s || '').trim().split(/\s+/)[0].toLowerCase();
+    return p.length > 3 && /(ar|er|ir)$/.test(p);
+  },
+  norm(s) { return String(s || '').trim().toLowerCase(); },
+  /* Nombres en castellano para los mensajes. */
+  ETIQUETA: {
+    actor: 'actor', usecase: 'caso de uso', boundary: 'límite del sistema', class: 'clase',
+    interface: 'interfaz', object: 'objeto', state: 'estado', participant: 'participante',
+    role: 'rol', node: 'nodo', artifact: 'artefacto', fragment: 'fragmento'
+  },
+  /* El curso modela el sistema o un controlador como participante aunque no
+     sea una clase del dominio (guía §8: actor → sistema → objetos). */
+  CONTROLADOR: ['sistema', 'controlador', 'control', 'interfaz', 'ui', 'pantalla', 'basededatos', 'bd'],
+
+  /* Devuelve avisos: {nivel, texto, id}. nivel: 'error' | 'aviso' | 'idea'. */
+  check(doc, d) {
+    const out = [];
+    const add = (nivel, texto, id) => out.push({ nivel: nivel, texto: texto, id: id || null });
+    if (!d) return out;
+    const els = d.elements || [], rels = d.relations || [];
+    const nom = (e) => {
+      if (!e) return 'elemento sin nombre';
+      if (['object', 'role', 'participant'].indexOf(e.type) >= 0) return Geo.objTitle(e) || 'sin nombre';
+      return e.name || e.className || 'sin nombre';
+    };
+    const conectados = (id) => rels.filter(r => r.from === id || r.to === id);
+
+    /* ---------- comunes ---------- */
+    const vistos = {};
+    els.forEach(e => {
+      if (['initial', 'final', 'activation'].indexOf(e.type) >= 0) return;
+      const n = Academia.norm(e.name || e.className);
+      if (!n) { add('error', 'Hay un ' + (Academia.ETIQUETA[e.type] || e.type) + ' sin nombre.', e.id); return; }
+      if (['class', 'interface', 'usecase', 'state', 'node'].indexOf(e.type) >= 0) {
+        if (vistos[n]) add('error', '«' + (e.name) + '» aparece dos veces en el mismo diagrama.', e.id);
+        vistos[n] = 1;
+      }
+    });
+    if (els.length > 15) {
+      add('idea', 'El diagrama tiene ' + els.length + ' elementos. El criterio del curso es representar lo necesario: revisá si todos aportan.');
+    }
+
+    /* ---------- casos de uso (10a clase) ---------- */
+    if (d.type === 'usecase') {
+      const limites = els.filter(e => e.type === 'boundary');
+      els.filter(e => e.type === 'actor').forEach(a => {
+        if (!conectados(a.id).length) add('aviso', 'El actor «' + nom(a) + '» no participa en ningún caso de uso. Cada actor debe participar en uno o más.', a.id);
+        const c = Geo.center(Geo.bounds(d, a));
+        if (limites.some(b => Geo.inside(Geo.bounds(d, b), c))) {
+          add('aviso', 'El actor «' + nom(a) + '» quedó dentro del límite del sistema. Los actores son externos y van afuera.', a.id);
+        }
+      });
+      els.filter(e => e.type === 'usecase').forEach(u => {
+        if (!conectados(u.id).length) add('aviso', 'El caso de uso «' + nom(u) + '» no está asociado a ningún actor ni a otro caso de uso.', u.id);
+        const n = Academia.norm(u.name);
+        if (Academia.INTERFAZ.some(p => n.indexOf(p) >= 0)) {
+          add('aviso', '«' + nom(u) + '» parece un paso de interfaz, no una funcionalidad visible para el actor.', u.id);
+        } else if (!Academia.infinitivo(u.name)) {
+          add('idea', '«' + nom(u) + '»: los casos de uso se nombran con verbo en infinitivo + objeto (por ejemplo «Realizar préstamo»).', u.id);
+        }
+        if (limites.length && !u.parentId) {
+          add('aviso', 'El caso de uso «' + nom(u) + '» quedó fuera del límite del sistema.', u.id);
+        }
+      });
+    }
+
+    /* ---------- clases (9na clase, guía §3 a §6) ---------- */
+    if (d.type === 'class') {
+      const clases = els.filter(e => e.type === 'class' || e.type === 'interface');
+      clases.forEach(c => {
+        if (clases.length > 1 && !conectados(c.id).length) {
+          add('aviso', 'La clase «' + nom(c) + '» no se relaciona con ninguna otra. Si el enunciado no la vincula, revisá si hace falta.', c.id);
+        }
+        if (!(c.attributes || []).length && !(c.methods || []).length) {
+          add('idea', 'La clase «' + nom(c) + '» no tiene atributos ni operaciones. Es válido en análisis temprano; verificá si el nivel pedido los requiere.', c.id);
+        }
+        (c.attributes || []).forEach(a => {
+          if (Academia.RUIDO.indexOf(Academia.norm(a.name).replace(/\s/g, '')) >= 0) {
+            add('aviso', '«' + nom(c) + '.' + a.name + '» es un dato técnico. Agregalo solo si el enunciado lo pide.', c.id);
+          }
+        });
+        const ms = (c.methods || []).map(m => Academia.norm(m.name));
+        const gs = ms.filter(m => /^(get|set)/.test(m)).length;
+        if (gs >= 3) add('aviso', '«' + nom(c) + '» tiene ' + gs + ' getters/setters. El encapsulamiento no obliga a listarlos todos en un modelo de análisis.', c.id);
+        const crud = ms.filter(m => Academia.CRUD.some(v => m.indexOf(v) === 0)).length;
+        if (crud >= 4) add('aviso', '«' + nom(c) + '» parece tener operaciones CRUD automáticas. Dejá las que representen comportamiento del dominio.', c.id);
+      });
+      /* Herencia: sin ciclos y sin usarla como asociación. */
+      const padre = {};
+      rels.filter(r => r.type === 'generalization').forEach(r => { padre[r.from] = r.to; });
+      Object.keys(padre).forEach(id => {
+        let p = padre[id], n = 0;
+        while (p && n++ < 30) { if (p === id) { add('error', 'Hay un ciclo de herencia en «' + nom(byIdIn(d, id)) + '».', id); break; } p = padre[p]; }
+      });
+      /* Una parte no puede pertenecer a dos compuestos distintos. */
+      const cuenta = {};
+      rels.filter(r => r.type === 'composition').forEach(r => { cuenta[r.to] = (cuenta[r.to] || 0) + 1; });
+      Object.keys(cuenta).forEach(id => {
+        if (cuenta[id] > 1) add('error', '«' + nom(byIdIn(d, id)) + '» es parte de ' + cuenta[id] + ' composiciones. En una composición la parte pertenece a un solo todo.', id);
+      });
+    }
+
+    /* ---------- multiplicidades (guía §6) ---------- */
+    rels.forEach(r => {
+      [['sourceMultiplicity', r.from], ['targetMultiplicity', r.to]].forEach(par => {
+        const v = String(r[par[0]] || '').trim();
+        if (v && !Academia.MULT.test(v)) {
+          add('error', 'La multiplicidad «' + v + '» no es válida. Usá 1, 0..1, *, 0..* o 1..*.', r.id);
+        }
+      });
+    });
+
+    /* ---------- objetos (guía §13) ---------- */
+    if (d.type === 'object') {
+      els.filter(e => e.type === 'object').forEach(o => {
+        if (!o.className) add('aviso', 'El objeto «' + nom(o) + '» no indica de qué clase es instancia. La notación es objeto : Clase.', o.id);
+        if (!(o.slots || []).some(s => String(s.value || '').trim())) {
+          add('idea', '«' + nom(o) + '» no muestra valores concretos. El diagrama de objetos sirve justamente para mostrar instancias con valores.', o.id);
+        }
+      });
+    }
+
+    /* ---------- estados (13a clase) ---------- */
+    if (d.type === 'state') {
+      const ini = els.filter(e => e.type === 'initial');
+      if (!ini.length) add('error', 'Falta el estado inicial. Toda máquina de estados arranca en un punto inicial.');
+      if (ini.length > 1) add('error', 'Hay ' + ini.length + ' estados iniciales. Debe haber uno solo.');
+      els.filter(e => e.type === 'state').forEach(s => {
+        if (Academia.infinitivo(s.name)) {
+          add('aviso', '«' + nom(s) + '» está en infinitivo: eso suele ser el evento de la transición, no el estado. Un estado describe una situación («Reservado», «Disponible»).', s.id);
+        }
+        if (!rels.some(r => r.to === s.id)) add('aviso', 'Al estado «' + nom(s) + '» no llega ninguna transición.', s.id);
+        if (!rels.some(r => r.from === s.id)) add('aviso', 'Del estado «' + nom(s) + '» no sale ninguna transición y no es un estado final.', s.id);
+      });
+      rels.filter(r => r.type === 'transition').forEach(r => {
+        const A = byIdIn(d, r.from);
+        if (A && A.type !== 'initial' && !String(r.event || '').trim()) {
+          add('aviso', 'Hay una transición sin evento saliendo de «' + nom(A) + '». El esquema es estado → evento → estado.', r.id);
+        }
+      });
+      /* Estados a los que no se llega desde el inicial. */
+      if (ini.length === 1) {
+        const vis = {}; const cola = [ini[0].id];
+        while (cola.length) {
+          const id = cola.shift(); if (vis[id]) continue; vis[id] = 1;
+          rels.forEach(r => { if (r.from === id && !vis[r.to]) cola.push(r.to); });
+        }
+        els.filter(e => e.type === 'state' && !vis[e.id]).forEach(e => {
+          add('aviso', 'No se puede llegar al estado «' + nom(e) + '» desde el estado inicial.', e.id);
+        });
+      }
+    }
+
+    /* ---------- secuencia (12a clase, guía §16 a §18) ---------- */
+    if (d.type === 'sequence') {
+      els.filter(e => e.type === 'participant').forEach(p => {
+        if (!rels.some(r => r.from === p.id || r.to === p.id)) {
+          add('aviso', 'La línea de vida «' + nom(p) + '» no envía ni recibe mensajes.', p.id);
+        }
+      });
+      rels.forEach(r => {
+        if (!String(r.label || '').trim()) add('aviso', 'Hay un mensaje sin nombre. Cada mensaje debe representar una interacción real.', r.id);
+      });
+      els.filter(e => e.type === 'fragment').forEach(f => {
+        const dentro = rels.filter(r => r.parentId === f.id).length;
+        if (!dentro) add('aviso', 'El fragmento «' + (f.op || 'alt') + '» no encierra ningún mensaje. Usá fragmentos solo cuando haya alternativa, opción o repetición.', f.id);
+        if (f.op === 'alt' && !String(f.guard2 || '').trim()) {
+          add('idea', 'El fragmento alt tiene una sola guarda. Un alt representa alternativas: conviene indicar la segunda región.', f.id);
+        }
+      });
+    }
+
+    /* ---------- comunicación (12a clase, guía §19) ---------- */
+    if (d.type === 'communication') {
+      els.filter(e => e.type === 'role').forEach(p => {
+        if (!rels.some(r => r.from === p.id || r.to === p.id)) add('aviso', 'El rol «' + nom(p) + '» no colabora con ningún otro.', p.id);
+      });
+      const nums = [];
+      rels.forEach(r => {
+        const ms = r.messages || [];
+        if (!ms.length) add('aviso', 'Hay un conector sin mensajes. El conector existe para que viajen mensajes numerados.', r.id);
+        ms.forEach(m => {
+          if (!String(m.text || '').trim()) add('aviso', 'Hay un mensaje sin nombre en un conector.', r.id);
+          const n = parseInt(m.n, 10);
+          if (isFinite(n)) nums.push(n);
+        });
+      });
+      if (nums.length) {
+        nums.sort((a, b) => a - b);
+        const esperado = nums.map((_, i) => i + 1).join(',');
+        if (nums.join(',') !== esperado) {
+          add('aviso', 'Los números de secuencia son ' + nums.join(', ') + '. Deben indicar el orden lógico: 1, 2, 3…');
+        }
+      }
+    }
+
+    /* ---------- despliegue (15a clase) ---------- */
+    if (d.type === 'deployment') {
+      const nodos = els.filter(e => e.type === 'node');
+      els.filter(e => e.type === 'artifact').forEach(a => {
+        if (!a.parentId) add('aviso', 'El artefacto «' + nom(a) + '» no está dentro de ningún nodo. Los artefactos se despliegan sobre nodos.', a.id);
+      });
+      if (nodos.length > 1) {
+        nodos.forEach(n => {
+          if (!rels.some(r => (r.from === n.id || r.to === n.id) && r.type === 'commpath')) {
+            add('aviso', 'El nodo «' + nom(n) + '» no tiene camino de comunicación con otro nodo.', n.id);
+          }
+        });
+      }
+    }
+
+    /* ---------- coherencia entre diagramas (guía §12, pedido §25) ---------- */
+    const clasesProyecto = {};
+    ((doc && doc.project && doc.project.diagrams) || []).forEach(x => {
+      if (x.type !== 'class') return;
+      (x.elements || []).forEach(e => {
+        if (e.type === 'class' || e.type === 'interface') clasesProyecto[Academia.norm(e.name)] = e;
+      });
+    });
+    if (Object.keys(clasesProyecto).length) {
+      if (d.type === 'object' || d.type === 'communication' || d.type === 'sequence') {
+        els.forEach(e => {
+          const cn = Academia.norm(e.className);
+          if (!cn) return;
+          if (!clasesProyecto[cn]) {
+            if (Academia.CONTROLADOR.indexOf(cn.replace(/\s/g, '')) < 0) {
+              add('idea', '«' + e.className + '» no existe en el diagrama de clases. Si representa una clase del dominio, agregala; si es el sistema o un controlador, está bien así.', e.id);
+            }
+            return;
+          }
+          /* Un mensaje debería corresponder a una operación de la clase receptora (guía §12). */
+          if (d.type === 'sequence') {
+            const clase = clasesProyecto[cn];
+            const ops = (clase.methods || []).map(m => Academia.norm(m.name));
+            if (!ops.length) return;
+            rels.filter(r => r.to === e.id && r.type === 'message').forEach(r => {
+              const msg = Academia.norm(String(r.label || '').split('(')[0]);
+              if (msg && ops.indexOf(msg) < 0) {
+                add('idea', 'El mensaje «' + r.label + '» no corresponde a ninguna operación de la clase ' + clase.name + '.', r.id);
+              }
+            });
+          }
+        });
+      }
+    }
+    return out;
+  },
+
+  resumen(lista) {
+    const c = { error: 0, aviso: 0, idea: 0 };
+    lista.forEach(x => { c[x.nivel]++; });
+    return c;
+  }
+};
+
+/* =========================================================================
+   Organización visual por tipo de diagrama.
+   Cada vista tiene su propia lógica de lectura (pedido §22 y guía §14):
+   no se usa el mismo algoritmo para todos. Solo mueve y redimensiona; no
+   crea, no borra y no toca relaciones.
+   ========================================================================= */
+const Layout = {
+  GAP_X: 90, GAP_Y: 80,
+  snap(v) { return Math.round(v / 10) * 10; },
+  tam(d, e) { const b = Geo.bounds(d, e); return { w: b.w, h: b.h }; },
+
+  run(d) {
+    if (!d) return false;
+    const f = Layout[d.type];
+    return f ? !!f(d) : false;
+  },
+
+  /* Casos de uso (10a clase): actores afuera, casos adentro y los casos de
+     inclusión/extensión en una segunda columna al lado de su caso base, para
+     que las líneas discontinuas no atraviesen otras elipses. */
+  usecase(d) {
+    const els = d.elements || [], rels = d.relations || [];
+    const casos = els.filter(e => e.type === 'usecase');
+    const actores = els.filter(e => e.type === 'actor');
+    const limite = els.filter(e => e.type === 'boundary')[0] || null;
+    if (!casos.length && !actores.length) return false;
+
+    const asoc = rels.filter(r => r.type === 'association');
+    const usadoPor = {};
+    casos.forEach(u => {
+      usadoPor[u.id] = asoc.map(r => (r.from === u.id ? r.to : (r.to === u.id ? r.from : null)))
+        .filter(id => id && actores.some(x => x.id === id));
+    });
+    /* Un caso es "satélite" si no lo usa ningún actor y cuelga de otro caso. */
+    const lazo = {};
+    rels.forEach(r => {
+      if (['include', 'extend', 'generalization'].indexOf(r.type) < 0) return;
+      const base = r.type === 'extend' ? r.to : (r.type === 'include' ? r.from : r.to);
+      const sat = r.type === 'extend' ? r.from : (r.type === 'include' ? r.to : r.from);
+      if (casos.some(c => c.id === sat) && casos.some(c => c.id === base)) lazo[sat] = base;
+    });
+    const principales = casos.filter(u => usadoPor[u.id].length || !lazo[u.id]);
+    const satelites = casos.filter(u => principales.indexOf(u) < 0);
+
+    const orden = actores.map(a => a.id);
+    principales.sort((p, q) => {
+      const i = usadoPor[p.id].length ? orden.indexOf(usadoPor[p.id][0]) : 99;
+      const j = usadoPor[q.id].length ? orden.indexOf(usadoPor[q.id][0]) : 99;
+      return i - j;
+    });
+
+    const x0 = 320, y0 = 120;
+    let y = y0, ancho1 = 200;
+    principales.forEach(u => {
+      const t = Layout.tam(d, u);
+      u.x = Layout.snap(x0); u.y = Layout.snap(y);
+      ancho1 = Math.max(ancho1, t.w);
+      y += t.h + 40;
+    });
+    /* Cada satélite se ubica frente a su caso base; si hay varios, se apilan. */
+    const x1 = x0 + ancho1 + 120;
+    let ancho2 = 0, ocupado = [];
+    satelites.forEach(u => {
+      const base = byIdIn(d, lazo[u.id]);
+      const t = Layout.tam(d, u);
+      let sy = base ? base.y : y;
+      while (ocupado.some(o => Math.abs(o - sy) < t.h + 24)) sy += t.h + 24;
+      ocupado.push(sy);
+      u.x = Layout.snap(x1); u.y = Layout.snap(sy);
+      ancho2 = Math.max(ancho2, t.w);
+      y = Math.max(y, sy + t.h + 40);
+    });
+
+    const alto = Math.max(220, y - y0 + 60);
+    const anchoTotal = ancho1 + (satelites.length ? 120 + ancho2 : 0);
+    if (limite) {
+      limite.x = Layout.snap(x0 - 60); limite.y = Layout.snap(y0 - 70);
+      limite.w = Layout.snap(anchoTotal + 120); limite.h = Layout.snap(alto);
+      casos.forEach(u => { u.parentId = limite.id; });
+    }
+    const izq = actores.filter((_, i) => i % 2 === 0), der = actores.filter((_, i) => i % 2 === 1);
+    const colocar = (lista, xa) => {
+      lista.forEach((a, i) => {
+        const suyos = casos.filter(u => usadoPor[u.id].indexOf(a.id) >= 0);
+        const cy = suyos.length
+          ? suyos.reduce((s, u) => s + u.y + Layout.tam(d, u).h / 2, 0) / suyos.length
+          : y0 + (i + 1) * (alto / (lista.length + 1));
+        a.x = Layout.snap(xa); a.y = Layout.snap(cy - Layout.tam(d, a).h / 2);
+      });
+    };
+    colocar(izq, x0 - 260);
+    colocar(der, x0 + anchoTotal + 180);
+    return true;
+  },
+
+  /* Clases: superclases arriba, especializaciones debajo (pedido §22). */
+  class(d) {
+    const els = (d.elements || []).filter(e => ['class', 'interface'].indexOf(e.type) >= 0);
+    if (!els.length) return false;
+    const rels = d.relations || [];
+    const padre = {};
+    rels.filter(r => r.type === 'generalization' || r.type === 'realization').forEach(r => { padre[r.from] = r.to; });
+    const nivel = (e, n) => {
+      let k = 0, p = padre[e.id], g = 0;
+      while (p && g++ < 20) { k++; p = padre[p]; }
+      return k;
+    };
+    const filas = {};
+    els.forEach(e => { const k = nivel(e); (filas[k] = filas[k] || []).push(e); });
+    /* Una pasada de baricentro: cada clase se acerca al promedio de las
+       posiciones de aquellas con las que se relaciona en el nivel anterior.
+       Con esto se reducen los cruces sin inventar relaciones (guía §14). */
+    const pos = {};
+    const niveles = Object.keys(filas).map(Number).sort((a, b) => a - b);
+    niveles.forEach((k, idx) => {
+      const fila = filas[k];
+      if (idx === 0) { fila.forEach((e, i) => { pos[e.id] = i; }); return; }
+      const peso = (e) => {
+        const vec = rels.map(r => (r.from === e.id ? r.to : (r.to === e.id ? r.from : null)))
+          .filter(id => id && pos[id] !== undefined).map(id => pos[id]);
+        return vec.length ? vec.reduce((a, b) => a + b, 0) / vec.length : 99;
+      };
+      fila.sort((a, b) => peso(a) - peso(b));
+      fila.forEach((e, i) => { pos[e.id] = i; });
+    });
+    /* Filas de a lo sumo cuatro clases para que el diagrama no quede larguísimo. */
+    const orden = [];
+    niveles.forEach(k => {
+      const fila = filas[k];
+      for (let i = 0; i < fila.length; i += 4) orden.push(fila.slice(i, i + 4));
+    });
+    let y = 60;
+    orden.forEach(fila => {
+      const anchos = fila.map(e => Layout.tam(d, e).w);
+      const total = anchos.reduce((s, w) => s + w, 0) + (fila.length - 1) * Layout.GAP_X;
+      let x = Math.max(60, Layout.snap(700 - total / 2));
+      let alto = 0;
+      fila.forEach((e, i) => {
+        e.x = Layout.snap(x); e.y = Layout.snap(y);
+        x += anchos[i] + Layout.GAP_X;
+        alto = Math.max(alto, Layout.tam(d, e).h);
+      });
+      y += alto + Layout.GAP_Y;
+    });
+    return true;
+  },
+
+  /* Objetos: cuadrícula simple; son instancias, no jerarquías. */
+  object(d) {
+    const els = (d.elements || []).filter(e => e.type === 'object');
+    if (!els.length) return false;
+    let x = 80, y = 80, alto = 0, col = 0;
+    els.forEach(e => {
+      const t = Layout.tam(d, e);
+      if (col >= 3) { x = 80; y += alto + Layout.GAP_Y; alto = 0; col = 0; }
+      e.x = Layout.snap(x); e.y = Layout.snap(y);
+      x += t.w + Layout.GAP_X; alto = Math.max(alto, t.h); col++;
+    });
+    return true;
+  },
+
+  /* Estados: recorrido desde el inicial, de izquierda a derecha. */
+  state(d) {
+    const els = d.elements || [], rels = d.relations || [];
+    const ini = els.filter(e => e.type === 'initial')[0];
+    if (!els.length) return false;
+    const cols = {}, puesto = {};
+    const raiz = ini || els[0];
+    let cola = [{ e: raiz, k: 0 }];
+    while (cola.length) {
+      const it = cola.shift();
+      if (puesto[it.e.id] !== undefined) continue;          // la columna 0 también cuenta
+      puesto[it.e.id] = it.k;
+      (cols[it.k] = cols[it.k] || []).push(it.e);
+      rels.forEach(r => {
+        if (r.from !== it.e.id) return;
+        const t = byIdIn(d, r.to);
+        if (t && puesto[t.id] === undefined) cola.push({ e: t, k: it.k + 1 });
+      });
+    }
+    let k = Object.keys(cols).length;
+    els.forEach(e => { if (puesto[e.id] === undefined) { (cols[k] = cols[k] || []).push(e); puesto[e.id] = k; } });
+    let x = 80;
+    Object.keys(cols).map(Number).sort((a, b) => a - b).forEach(c => {
+      const col = cols[c];
+      let y = 80, ancho = 0;
+      col.forEach(e => {
+        const t = Layout.tam(d, e);
+        e.x = Layout.snap(x); e.y = Layout.snap(y);
+        y += t.h + 60; ancho = Math.max(ancho, t.w);
+      });
+      x += ancho + 140;
+    });
+    return true;
+  },
+
+  /* Secuencia: participantes alineados arriba, mensajes espaciados en el tiempo. */
+  sequence(d) {
+    const els = d.elements || [];
+    const parts = els.filter(e => e.type === 'participant');
+    if (!parts.length) return false;
+    /* El orden horizontal respeta quién inicia la interacción. */
+    const ms = Doc.renumber(d);
+    const vistos = [];
+    ms.forEach(r => { [r.from, r.to].forEach(id => { if (vistos.indexOf(id) < 0) vistos.push(id); }); });
+    parts.sort((a, b) => {
+      const i = vistos.indexOf(a.id), j = vistos.indexOf(b.id);
+      return (i < 0 ? 99 : i) - (j < 0 ? 99 : j);
+    });
+    let x = 90;
+    parts.forEach(p => {
+      p.x = Layout.snap(x); p.y = 40;
+      x += Math.max(200, Layout.tam(d, p).w + 90);
+    });
+    let y = 150;
+    ms.forEach(r => { r.y = Layout.snap(y); y += 48; });
+    /* Las activaciones acompañan a su dueño; los fragmentos, a lo que encierran. */
+    els.filter(e => e.type === 'fragment').forEach(f => {
+      const dentro = (d.relations || []).filter(r => r.parentId === f.id);
+      if (!dentro.length) return;
+      const y1 = Math.min.apply(null, dentro.map(r => r.y)), y2 = Math.max.apply(null, dentro.map(r => r.y));
+      f.x = 60; f.y = Layout.snap(y1 - 46);
+      f.w = Layout.snap(x - 60); f.h = Layout.snap(y2 - y1 + 90);
+    });
+    Doc.assignFragments(d);
+    Doc.renumber(d);
+    return true;
+  },
+
+  /* Comunicación: el rol más conectado al centro y el resto alrededor. */
+  communication(d) {
+    const els = (d.elements || []).filter(e => e.type === 'role');
+    if (!els.length) return false;
+    const rels = d.relations || [];
+    const grado = (e) => rels.filter(r => r.from === e.id || r.to === e.id).length;
+    const orden = els.slice().sort((a, b) => grado(b) - grado(a));
+    const centro = { x: 620, y: 360 };
+    const eje = orden[0];
+    eje.x = Layout.snap(centro.x - Layout.tam(d, eje).w / 2);
+    eje.y = Layout.snap(centro.y - Layout.tam(d, eje).h / 2);
+    const resto = orden.slice(1);
+    const radio = Math.max(260, 90 + resto.length * 46);
+    resto.forEach((e, i) => {
+      const a = -Math.PI / 2 + (i * 2 * Math.PI) / Math.max(1, resto.length);
+      const t = Layout.tam(d, e);
+      e.x = Layout.snap(centro.x + Math.cos(a) * radio - t.w / 2);
+      e.y = Layout.snap(centro.y + Math.sin(a) * radio * 0.72 - t.h / 2);
+    });
+    return true;
+  },
+
+  /* Despliegue: nodos grandes en fila, artefactos apilados adentro. */
+  deployment(d) {
+    const nodos = (d.elements || []).filter(e => e.type === 'node' && !e.parentId);
+    if (!nodos.length) return false;
+    let x = 70;
+    nodos.forEach(n => {
+      const hijos = Geo.childrenOf(d, n);
+      const anchoHijo = hijos.reduce((m, h) => Math.max(m, Layout.tam(d, h).w), 0);
+      n.w = Layout.snap(Math.max(Geo.minSize(n).w, anchoHijo + 60));
+      n.h = Layout.snap(Math.max(Geo.minSize(n).h, 70 + hijos.length * 74));
+      n.x = Layout.snap(x); n.y = 90;
+      let hy = n.y + 62;
+      hijos.forEach(h => {
+        h.x = Layout.snap(n.x + 26); h.y = Layout.snap(hy);
+        hy += Layout.tam(d, h).h + 14;
+      });
+      x += n.w + 120;
+    });
+    return true;
+  }
+};
 /* =========================================================================
    3. Dibujo: representación UML de cada elemento y de cada relación
    ========================================================================= */
@@ -2323,6 +2926,24 @@ class CanvasManager {
     const r = this.rect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
     this.zoomAt(clamp(this.k * f, .25, 3), this.toWorldXY(cx, cy), cx, cy);
   }
+  /* Lleva la vista hasta un elemento (lo usa la revisión del modelo). */
+  centerOn(id) {
+    const d = this.app.diagram();
+    const e = byId(d, id);
+    const r = this.svg.getBoundingClientRect();
+    let c = null;
+    if (e) c = Geo.center(Geo.bounds(d, e));
+    else {
+      const rel = (d.relations || []).find(x => x.id === id);
+      const gm = rel && Render.relGeom(d, rel);
+      if (gm) c = gm.mid;
+    }
+    if (!c || r.width < 80) { this.requestRender(); return; }
+    this.tx = r.width / 2 - c.x * this.k;
+    this.ty = r.height / 2 - c.y * this.k;
+    this.applyView(); this.requestRender();
+  }
+
   fit() {
     const d = this.app.diagram(); if (!d) return;
     const r = this.rect(), b = Geo.contentBox(d), pad = 40;
@@ -3406,6 +4027,73 @@ class Application {
     document.getElementById('inlineEdit').style.display = 'none';
   }
 
+  /* ---------------- criterio académico ---------------- */
+  /* Acomoda el diagrama activo con la lógica visual de su vista. */
+  tidy() {
+    const d = this.diagram();
+    if (!Layout.run(d)) { UI.toast('No hay nada para acomodar en este diagrama.', 'err'); return; }
+    this.commit();
+    this.canvas.fit();
+    UI.toast('Diagrama acomodado. Podés deshacer con Ctrl+Z.', 'ok');
+  }
+  /* Revisa el modelo con el criterio del curso (no solo la sintaxis UML). */
+  review() {
+    const d = this.diagram();
+    const lista = Academia.check(this.doc, d);
+    const r = Academia.resumen(lista);
+    const fila = (x, i) => '<li class="' + x.nivel + '"><span class="tag">' +
+      (x.nivel === 'error' ? 'ERROR' : x.nivel === 'aviso' ? 'REVISAR' : 'IDEA') + '</span>' +
+      (x.id ? '<button data-ir="' + x.id + '">' + esc(x.texto) + '</button>' : '<span>' + esc(x.texto) + '</span>') + '</li>';
+    const cuerpo = lista.length
+      ? '<ul>' + lista.map(fila).join('') + '</ul>'
+      : '<p class="bien">No se encontraron problemas de criterio en este diagrama.</p>';
+    const b = UI.open('<div class="revision"><h3>Revisión de «' + esc(d.name) + '»</h3>' +
+      '<p class="fuente">' + r.error + ' error(es) · ' + r.aviso + ' para revisar · ' + r.idea + ' sugerencia(s).</p>' +
+      cuerpo +
+      '<div class="actions"><button class="tb" id="revClose">Cerrar</button></div></div>', null, () => { });
+    b.classList.add('revision');
+    b.querySelector('#revClose').onclick = () => UI.close();
+    b.querySelectorAll('[data-ir]').forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.dataset.ir;
+        UI.close();
+        this.select([id]);
+        this.canvas.centerOn(id);
+      };
+    });
+  }
+
+  /* ---------------- Acerca de ---------------- */
+  /* Usa el mismo modal que el resto de la aplicación. No cambia nada del editor. */
+  about() {
+    const b = UI.open(
+      '<div class="about">' +
+      '<h3>' + APP_NAME + ' v' + APP_VERSION + '</h3>' +
+      '<p class="sub">' + esc(APP_TAGLINE) + '<br>Proyecto académico independiente, pensado para estudiantes de Ingeniería de Software.</p>' +
+      '<dl>' +
+      '<dt>Autor original y desarrollador</dt><dd>' + esc(APP_AUTHOR) + '</dd>' +
+      '<dt>Versión</dt><dd>' + APP_VERSION + ' (primera versión pública)</dd>' +
+      '<dt>Proyecto iniciado</dt><dd>' + APP_YEAR + '</dd>' +
+      '<dt>Repositorio oficial</dt><dd><a id="abRepo" href="' + APP_REPO + '" target="_blank" rel="noopener noreferrer">Ver proyecto en GitHub</a></dd>' +
+      '<dt>Copyright</dt><dd>© ' + APP_YEAR + ' ' + esc(APP_AUTHOR) + '</dd>' +
+      '</dl>' +
+      '<div class="support">' +
+      '<h4>❤️ Apoyá el desarrollo de MiniUML</h4>' +
+      '<p>MiniUML es gratuito para uso académico y personal. Si la herramienta te resulta útil y querés apoyar voluntariamente su mantenimiento y futuras actualizaciones:</p>' +
+      '<p class="alias"><b>Alias de donación:</b> <code id="abAlias">' + APP_ALIAS + '</code>' +
+      '<button class="mini" id="abCopy" type="button">Copiar alias</button></p>' +
+      '<p>Las donaciones son voluntarias y no son necesarias para descargar o utilizar MiniUML.</p>' +
+      '</div>' +
+      '<div class="actions"><button class="tb" id="abClose">Cerrar</button></div>' +
+      '</div>', null, () => { });
+    b.classList.add('about');            // ensancha solo este cuadro
+    b.querySelector('#abClose').onclick = () => UI.close();
+    b.querySelector('#abCopy').onclick = async () => {
+      const ok = await Clip.plain(APP_ALIAS);
+      UI.toast(ok ? 'Alias copiado' : 'El navegador no permitió usar el portapapeles.', ok ? 'ok' : 'err');
+    };
+  }
+
   /* ---------------- Diseño Orientado a Objetos ---------------- */
   /* La tabla trabaja siempre sobre un diagrama de clases: si el activo es de
      otro tipo, se pasa al de clases (creándolo si hace falta). */
@@ -3610,6 +4298,9 @@ class Application {
     $('btnRedo').onclick = () => this.redo();
     $('btnExample').onclick = () => this.loadExample();
     $('btnOop').onclick = () => this.oopToggle();
+    $('btnAbout').onclick = () => this.about();
+    $('btnTidy').onclick = () => this.tidy();
+    $('btnReview').onclick = () => this.review();
     $('oopClose').onclick = () => this.oopClose();
     $('oopAdd').onclick = () => this.oopAdd();
     $('oopSync').onclick = () => this.oopSync();
@@ -3709,7 +4400,8 @@ class Application {
 window.MiniUML = {
   Doc: Doc, Geo: Geo, Render: Render, ElementFactory: ElementFactory, ExportManager: ExportManager,
   StorageManager: StorageManager, Panels: Panels, UI: UI, byId: byId, exampleDoc: exampleDoc,
-  Oop: Oop, Clip: Clip,
+  Oop: Oop, Clip: Clip, Academia: Academia, Layout: Layout,
+  APP: { name: APP_NAME, version: APP_VERSION, author: APP_AUTHOR, year: APP_YEAR, repo: APP_REPO, alias: APP_ALIAS },
   DIAGRAMS: DIAGRAMS, RULES: RULES, RDEF: RDEF
 };
 
